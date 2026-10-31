@@ -1,0 +1,66 @@
+﻿discrimination done
+random split done
+stability done
+business + cut-offs done
+explainability done
+fairness done
+               random_split_auc  oot_auc
+model                                   
+lgbm_bureau               0.595    0.588
+lgbm_combined             0.672    0.658
+lgbm_fair                 0.646    0.637
+lgbm_fair raw                      0.2214
+lgbm_fair isotonic                 0.1732
+scorecard_fair                     0.1770
+lgbm_combined isotonic             0.1708
+constant (Aug–Sep default rate)    0.1808
+dtype: float64
+                    Oct vs Aug–Sep  Nov vs Aug–Sep
+lgbm_fair                    0.002           0.004
+scorecard_fair               0.007           0.016
+lgbm_combined                0.000           0.003
+scorecard_combined           0.002           0.004
+   approval_rate  lgbm_fair  lgbm_combined  scorecard_fair  lgbm_bureau
+0            0.5      0.164          0.153           0.184        0.198
+1            0.6      0.178          0.168           0.195        0.205
+2            0.7      0.191          0.182           0.205        0.209
+3            0.8      0.204          0.196           0.215        0.213
+4            0.9      0.218          0.213           0.224        0.220
+   bureau_only_approval  bad_rate  ...  lgbm_combined  extra_lgbm_combined
+0                   0.5  0.198138  ...       0.792566                28778
+1                   0.6  0.204707  ...       0.848949                24488
+2                   0.7  0.209399  ...       0.860325                15770
+
+[3 rows x 6 columns]
+no-score approvals at train bad rate: {'lgbm_fair': 0.6820776714641794, 'lgbm_combined': 0.7597893382648548, 'lgbm_bureau': 0.0009045589772453164}
+{'lgbm_fair': {'approve': 585, 'refer': 569}, 'scorecard_fair': {'approve': 589, 'refer': 573}, 'lgbm_combined': {'approve': 589, 'refer': 569}, 'scorecard_combined': {'approve': 593, 'refer': 571}}
+all 
+           rows  share  bad_rate
+band                           
+approve  56923  0.579     0.175
+refer    21680  0.220     0.279
+decline  19761  0.201     0.361
+no_score 
+           rows  share  bad_rate
+band                           
+approve  23703  0.476     0.178
+refer    14320  0.288     0.268
+decline  11725  0.236     0.334
+self_employed 
+           rows  share  bad_rate
+band                           
+approve  28778  0.529     0.179
+refer    12561  0.231     0.278
+decline  13034  0.240     0.361
+fallback (scorecard) 
+           rows  share  bad_rate
+band                           
+approve  57119  0.581     0.193
+refer    21988  0.224     0.273
+decline  19257  0.196     0.317
+alternative (lgbm_combined) 
+           rows  share  bad_rate
+band                           
+approve  59726  0.607     0.169
+refer    18233  0.185     0.278
+decline  20405  0.207     0.390
