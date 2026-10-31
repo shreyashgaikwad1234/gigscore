@@ -1,0 +1,502 @@
+{
+ "generated_by": "src/evaluate.py on 2026-10-29",
+ "data": "L&T Vehicle Loan Default, October 2018 out-of-time test (real data)",
+ "model": "lgbm_fair",
+ "fallback_model": "scorecard_fair",
+ "alternative_model": "lgbm_combined",
+ "versions": {
+  "lgbm_fair": "lgbm-fair-2026.10",
+  "scorecard_fair": "scorecard-fair-2026.10",
+  "lgbm_combined": "lgbm-combined-2026.10"
+ },
+ "n_test": 98364,
+ "test_default_rate": 0.23514700500182995,
+ "score_quantiles": [
+  300,
+  514,
+  518,
+  518,
+  529,
+  534,
+  539,
+  539,
+  542,
+  542,
+  542,
+  542,
+  549,
+  554,
+  554,
+  554,
+  554,
+  554,
+  554,
+  554,
+  554,
+  554,
+  554,
+  558,
+  558,
+  558,
+  558,
+  558,
+  558,
+  559,
+  559,
+  559,
+  563,
+  563,
+  563,
+  563,
+  563,
+  563,
+  563,
+  563,
+  564,
+  569,
+  569,
+  569,
+  570,
+  570,
+  570,
+  570,
+  570,
+  570,
+  570,
+  570,
+  570,
+  574,
+  574,
+  574,
+  575,
+  577,
+  577,
+  577,
+  577,
+  580,
+  580,
+  580,
+  581,
+  581,
+  581,
+  581,
+  581,
+  581,
+  581,
+  583,
+  584,
+  584,
+  584,
+  584,
+  584,
+  584,
+  584,
+  584,
+  584,
+  584,
+  584,
+  584,
+  584,
+  586,
+  586,
+  586,
+  586,
+  586,
+  594,
+  594,
+  596,
+  598,
+  598,
+  598,
+  598,
+  599,
+  599,
+  599,
+  599,
+  599,
+  603,
+  603,
+  603,
+  603,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  606,
+  611,
+  611,
+  611,
+  611,
+  611,
+  611,
+  611,
+  611,
+  611,
+  620,
+  620,
+  622,
+  622,
+  622,
+  622,
+  622,
+  622,
+  622,
+  626,
+  626,
+  626,
+  626,
+  626,
+  633,
+  633,
+  633,
+  633,
+  633,
+  634,
+  634,
+  634,
+  634,
+  634,
+  634,
+  639,
+  639,
+  639,
+  641,
+  641,
+  641,
+  641,
+  641,
+  644,
+  647,
+  647,
+  647,
+  647,
+  647,
+  647,
+  647,
+  647,
+  647,
+  651,
+  651,
+  651,
+  651,
+  668,
+  668,
+  668,
+  668,
+  668,
+  668,
+  668,
+  668,
+  668,
+  669,
+  669,
+  669,
+  669,
+  685,
+  685,
+  685,
+  685,
+  685,
+  688,
+  699,
+  716,
+  723,
+  723,
+  723,
+  900
+ ],
+ "curve": [
+  {
+   "approval_rate": 0.05,
+   "bad_rate": 0.08641724278161854,
+   "score_cutoff": 685
+  },
+  {
+   "approval_rate": 0.1,
+   "bad_rate": 0.09902399349328996,
+   "score_cutoff": 668
+  },
+  {
+   "approval_rate": 0.15,
+   "bad_rate": 0.10918332768553032,
+   "score_cutoff": 647
+  },
+  {
+   "approval_rate": 0.2,
+   "bad_rate": 0.11584405022111523,
+   "score_cutoff": 641
+  },
+  {
+   "approval_rate": 0.25,
+   "bad_rate": 0.12480175674027083,
+   "score_cutoff": 634
+  },
+  {
+   "approval_rate": 0.3,
+   "bad_rate": 0.13450133857467214,
+   "score_cutoff": 626
+  },
+  {
+   "approval_rate": 0.35,
+   "bad_rate": 0.14256252360066227,
+   "score_cutoff": 620
+  },
+  {
+   "approval_rate": 0.4,
+   "bad_rate": 0.15030752808417627,
+   "score_cutoff": 611
+  },
+  {
+   "approval_rate": 0.45,
+   "bad_rate": 0.15814205675040666,
+   "score_cutoff": 606
+  },
+  {
+   "approval_rate": 0.5,
+   "bad_rate": 0.1641454190557521,
+   "score_cutoff": 599
+  },
+  {
+   "approval_rate": 0.55,
+   "bad_rate": 0.17116451016635859,
+   "score_cutoff": 594
+  },
+  {
+   "approval_rate": 0.6,
+   "bad_rate": 0.17755599986444814,
+   "score_cutoff": 584
+  },
+  {
+   "approval_rate": 0.65,
+   "bad_rate": 0.1844941113909004,
+   "score_cutoff": 581
+  },
+  {
+   "approval_rate": 0.7,
+   "bad_rate": 0.19067605838355967,
+   "score_cutoff": 577
+  },
+  {
+   "approval_rate": 0.75,
+   "bad_rate": 0.19673864421942988,
+   "score_cutoff": 570
+  },
+  {
+   "approval_rate": 0.8,
+   "bad_rate": 0.2037971305486015,
+   "score_cutoff": 564
+  },
+  {
+   "approval_rate": 0.85,
+   "bad_rate": 0.21098207130811275,
+   "score_cutoff": 559
+  },
+  {
+   "approval_rate": 0.9,
+   "bad_rate": 0.21793105006325683,
+   "score_cutoff": 554
+  },
+  {
+   "approval_rate": 0.95,
+   "bad_rate": 0.22550992016779745,
+   "score_cutoff": 542
+  },
+  {
+   "approval_rate": 1.0,
+   "bad_rate": 0.23514700500182995,
+   "score_cutoff": 300
+  }
+ ],
+ "bands": {
+  "lgbm_fair": {
+   "approve": 585,
+   "refer": 569
+  },
+  "scorecard_fair": {
+   "approve": 589,
+   "refer": 573
+  },
+  "lgbm_combined": {
+   "approve": 589,
+   "refer": 569
+  },
+  "scorecard_combined": {
+   "approve": 593,
+   "refer": 571
+  }
+ },
+ "band_table": {
+  "approve": {
+   "share": 0.5786974909519743,
+   "bad_rate": 0.17486780387541065
+  },
+  "refer": {
+   "share": 0.22040583953478915,
+   "bad_rate": 0.2788745387453875
+  },
+  "decline": {
+   "share": 0.20089666951323654,
+   "bad_rate": 0.3608116998127625
+  }
+ },
+ "metrics": {
+  "lgbm_fair": {
+   "all": {
+    "auc": 0.6366328178722535,
+    "auc_lo": 0.6328708185220941,
+    "auc_hi": 0.6409099587414819
+   },
+   "no_score": {
+    "auc": 0.6114454121348477,
+    "auc_lo": 0.6062725891330382,
+    "auc_hi": 0.6168146986890024
+   },
+   "self_employed": {
+    "auc": 0.6307049139656686,
+    "auc_lo": 0.6257501856584404,
+    "auc_hi": 0.6361058737241356
+   }
+  },
+  "lgbm_combined": {
+   "all": {
+    "auc": 0.6580567522541947,
+    "auc_lo": 0.6542247469330826,
+    "auc_hi": 0.6624118156837226
+   },
+   "no_score": {
+    "auc": 0.6433089571130921,
+    "auc_lo": 0.6381703588096715,
+    "auc_hi": 0.6491380539337478
+   },
+   "self_employed": {
+    "auc": 0.6546502951508318,
+    "auc_lo": 0.6491607072844117,
+    "auc_hi": 0.6600444359998523
+   }
+  },
+  "scorecard_fair": {
+   "all": {
+    "auc": 0.5970532288014816,
+    "auc_lo": 0.5928368638740902,
+    "auc_hi": 0.6009790974793328
+   },
+   "no_score": {
+    "auc": 0.5797888964271761,
+    "auc_lo": 0.5740529692631455,
+    "auc_hi": 0.5847767488210261
+   },
+   "self_employed": {
+    "auc": 0.5903986035497096,
+    "auc_lo": 0.585198163551309,
+    "auc_hi": 0.5955604726432217
+   }
+  },
+  "lgbm_bureau": {
+   "all": {
+    "auc": 0.5877073204465592,
+    "auc_lo": 0.5838859474928365,
+    "auc_hi": 0.5917686186139521
+   },
+   "no_score": {
+    "auc": 0.5070758081193398,
+    "auc_lo": 0.5048799371393239,
+    "auc_hi": 0.509822569068332
+   },
+   "self_employed": {
+    "auc": 0.5833747614769109,
+    "auc_lo": 0.578088469589886,
+    "auc_hi": 0.5883789289887015
+   }
+  }
+ },
+ "fairness_options": [
+  {
+   "option": "lgbm-combined-2026.10 (all features)",
+   "auc": 0.6580567522541947,
+   "auc_no_score": 0.6433089571130921,
+   "bad_rate_approved": 0.1683723609746179,
+   "max_state_gap": 0.3396097427167679,
+   "max_state_fpr_gap": 0.345926301337676,
+   "states_flagged": 9.0,
+   "n_states": 18.0
+  },
+  {
+   "option": "without area & branch",
+   "auc": 0.6522879528107497,
+   "auc_no_score": 0.6360558354571074,
+   "bad_rate_approved": 0.17096479040292792,
+   "max_state_gap": 0.2892879170877451,
+   "max_state_fpr_gap": 0.2886238291369637,
+   "states_flagged": 10.0,
+   "n_states": 18.0
+  },
+  {
+   "option": "without area, branch & dealer",
+   "auc": 0.638643264402871,
+   "auc_no_score": 0.6152540122433424,
+   "bad_rate_approved": 0.17667491273848657,
+   "max_state_gap": 0.20063958472964094,
+   "max_state_fpr_gap": 0.1869401703245015,
+   "states_flagged": 7.0,
+   "n_states": 18.0
+  },
+  {
+   "option": "without area, branch, dealer & ID documents",
+   "auc": 0.6364312947293735,
+   "auc_no_score": 0.6110758033421753,
+   "bad_rate_approved": 0.178386255040835,
+   "max_state_gap": 0.08604244509950232,
+   "max_state_fpr_gap": 0.07754167777634424,
+   "states_flagged": 3.0,
+   "n_states": 18.0
+  },
+  {
+   "option": "lgbm-fair-2026.10 (shipped; own tuning)",
+   "auc": 0.6366328178722535,
+   "auc_no_score": 0.6114454121348477,
+   "bad_rate_approved": 0.17755599986444814,
+   "max_state_gap": 0.08546104975066504,
+   "max_state_fpr_gap": 0.0769639745433548,
+   "states_flagged": 3.0,
+   "n_states": 18.0
+  }
+ ],
+ "extra_approvals": [
+  {
+   "bureau_only_approval": 0.5,
+   "bad_rate": 0.1981384218474226,
+   "model_approval": 0.7395896872839657,
+   "extra": 23567
+  },
+  {
+   "bureau_only_approval": 0.6,
+   "bad_rate": 0.20470708825788056,
+   "model_approval": 0.8003029563661502,
+   "extra": 19703
+  },
+  {
+   "bureau_only_approval": 0.7,
+   "bad_rate": 0.2093994562205098,
+   "model_approval": 0.8267048920336708,
+   "extra": 12463
+  }
+ ],
+ "no_score_approval_at_train_rate": {
+  "lgbm_fair": 0.6820776714641794,
+  "lgbm_combined": 0.7597893382648548,
+  "lgbm_bureau": 0.0009045589772453164
+ },
+ "train_default_rate": 0.2038801098004303,
+ "fairness_age_flagged": 0,
+ "fairness_state_flagged": 3,
+ "fairness_n_states": 18
+}
