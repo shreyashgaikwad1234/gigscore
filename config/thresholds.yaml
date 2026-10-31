@@ -1,0 +1,44 @@
+# Decision thresholds. PROPOSED by src/evaluate.py on 2026-10-29; the lender chooses.
+# Score >= approve -> approve; >= refer -> refer; else decline. Edit here, never in code.
+model: lgbm_fair
+fallback_model: scorecard_fair
+alternative_model: lgbm_combined
+score_scale:
+  base_score: 600
+  base_odds: 4
+  points_to_double_odds: 50
+  min: 300
+  max: 900
+bands:
+  lgbm_fair:
+    approve: 585
+    refer: 569
+  scorecard_fair:
+    approve: 589
+    refer: 573
+  lgbm_combined:
+    approve: 589
+    refer: 569
+  scorecard_combined:
+    approve: 593
+    refer: 571
+policy:
+  approve_share: 0.6
+  refer_share: 0.2
+  chosen_on: Aug-Sep 2018 out-of-fold scores (src/evaluate.py)
+  october_bad_rate:
+    approve: 0.1749
+    refer: 0.2789
+    decline: 0.3608
+  october_share:
+    approve: 0.5787
+    refer: 0.2204
+    decline: 0.2009
+  aug_sep_bad_rate:
+    approve: 0.1431
+    refer: 0.2543
+    decline: 0.3324
+calibration_offset: 0.0
+kill_switch:
+  psi_max: 0.25
+  action: fall back to fallback_model, or route every application to manual review

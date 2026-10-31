@@ -1,0 +1,38 @@
+# Early-warning rules (build guide Section 8, Step 2). Thresholds are editable here; no code change needed.
+# Rules run on a borrower's last 8-12 weeks of bank / UPI statement rows (src/watch.py).
+# These thresholds come from the guide and the survey design; they are NOT yet validated on real rider
+# statements (guide Section 10.3). Treat flags as prompts for a human call, not as decisions.
+
+inflow_trend:            # last 4-week mean weekly inflow as a share of the 12-week mean
+  amber_below: 0.80
+  red_below: 0.60
+inflow_gaps:             # weeks with zero inflow among the last 8
+  amber_at: 1
+  red_at: 2
+balance_before_emi:      # minimum balance in the days before an EMI due date, as a multiple of the EMI
+  days_before: 5
+  amber_below: 1.0
+  red_below: 0.5
+bills:                   # utility / rent payments marked late or bounced in the last 3 months
+  lookback_days: 90
+  amber_at: 1
+  red_at: 2
+obligation_ratio:        # all monthly EMIs as a share of the last 28 days' inflow
+  amber_above: 0.35
+  red_above: 0.50
+cash_out_speed:          # average share of each inflow withdrawn within 48 hours
+  hours: 48
+  amber_above: 0.70
+  red_above: 0.90
+
+combination:             # how rule results combine into the loan's flag
+  amber_if_ambers: 2     # two or more amber rules -> amber
+  red_if_ambers: 3       # three or more amber rules -> red; any red rule -> red
+
+actions:                 # suggested next step per flag (collections / customer team)
+  green: none
+  amber: reminder_call
+  amber_timing: emi_date_shift   # amber driven by low balance before the due date while inflows hold up
+  red: restructuring_offer
+
+min_weeks: 8             # fewer weeks of statement than this -> no flag, ask for more data
