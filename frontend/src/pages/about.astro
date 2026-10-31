@@ -1,0 +1,91 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+<Layout title="Model governance" active="about"
+  photo="rider-street" photoAlt="A man riding a motorcycle down a Mumbai street"
+  subtitle="The inputs GigScore uses and excludes, its out-of-time performance, fairness testing across states and age groups, and its limitations. All figures are generated directly from the model pipeline."
+  steps={["The headline measures summarise the production model, its fallback and fairness results.",
+          "The tables compare the production model with bureau data alone, the fallback scorecard and the models considered during development.",
+          "The documents below are the full model card, validation report, variable specification and data profile."]}
+  next={{ title: "Validate GigScore on your portfolio", text: "A three-stage pilot — historical back-test, shadow assessment and a controlled go-live — with success criteria agreed in advance.",
+          href: "/pilot", cta: "View the pilot programme", alt: ["/analytics", "Back to the validation"] }}>
+  <section class="grid cols-4" id="kpis">
+    {[0, 1, 2, 3].map(() => <div class="card kpi"><div class="skeleton" style="width:60%"></div><div class="skeleton" style="height:28px;margin-top:10px"></div></div>)}
+  </section>
+
+  <section class="grid cols-2" style="margin-top:16px">
+    <div class="card">
+      <div class="card-head"><div><h2>Discrimination (AUC) with 95% intervals</h2><p>Out-of-time validation, October 2018. Intervals in grey.</p></div></div>
+      <div id="metrics"></div>
+      <div class="plain" id="auc-plain"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Fairness across states</h2><p>At a 60% approval rate. Age and state are not decision inputs.</p></div></div>
+      <div id="fairness"></div>
+      <div class="plain mint">The earlier model was marginally more accurate but produced large differences in approval rates between states.
+        The production model accepts a small reduction in discrimination in exchange for materially more consistent treatment across states.</div>
+    </div>
+  </section>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-head">
+      <div class="segmented" id="tabs">
+        <label><input type="radio" name="doc" value="model_card" checked /><span>Model card</span></label>
+        <label><input type="radio" name="doc" value="validation_report" /><span>Validation report</span></label>
+        <label><input type="radio" name="doc" value="features" /><span>Variable specification</span></label>
+        <label><input type="radio" name="doc" value="profile" /><span>Data profile</span></label>
+      </div>
+    </div>
+    <article id="doc" class="prose"><div class="skeleton"></div></article>
+  </div>
+</Layout>
+
+<script>
+  import { marked } from "marked";
+  import DOMPurify from "dompurify";
+  import { $, $$, API, api, getModel, esc, pct, num } from "../lib/api";
+
+  getModel(true).then((m) => {
+    const M = m.metrics, main = M[m.model];
+    const tiles = [
+      ["Production model", m.versions[m.model], `Fallback: ${m.versions[m.fallback_model]}`, true],
+      ["AUC · all applicants", main.all.auc.toFixed(2), "0.5 = random · 1.0 = perfect"],
+      ["AUC · new to credit", main.no_score.auc.toFixed(2), `bureau data alone: ${M.lgbm_bureau.no_score.auc.toFixed(2)}, close to random`],
+      ["States outside tolerance", `${m.fairness_state_flagged} of ${m.fairness_n_states}`, `more than 5 points from the average · age groups: ${m.fairness_age_flagged} of 5`],
+    ];
+    $("#auc-plain").innerHTML = `Interpretation: given one borrower who paid the first EMI and one who did not, GigScore ranks the paying borrower as lower risk
+      about <b>${Math.round(main.all.auc * 100)} times out of 100</b> (${Math.round(main.no_score.auc * 100)} for new-to-credit applicants, against
+      ${Math.round(M.lgbm_bureau.no_score.auc * 100)} — close to random — for bureau data alone).`;
+    $("#kpis").innerHTML = tiles.map(([l, v, s, acc]) =>
+      `<div class="card kpi ${acc ? "accent" : ""}"><div class="label">${esc(l)}</div><div class="value" style="${String(v).length > 12 ? "font-size:18px" : ""}">${esc(v)}</div><div class="sub">${esc(s)}</div></div>`).join("");
+
+    const label: Record<string, string> = { [m.model]: "Production model", [m.alternative_model]: "Earlier model (location proxies)",
+      [m.fallback_model]: "Fallback scorecard", lgbm_bureau: "Bureau data only" };
+    const ci = (x: any) => `<b>${x.auc.toFixed(3)}</b> <span class="tiny muted">${x.auc_lo.toFixed(3)}–${x.auc_hi.toFixed(3)}</span>`;
+    $("#metrics").innerHTML = `<div class="table-wrap"><table>
+      <tr><th>Version</th><th class="num">All applicants</th><th class="num">No credit score</th><th class="num">Self-employed</th></tr>
+      ${Object.entries(M).map(([k, v]: [string, any]) => `<tr class="${k === m.model ? "highlight" : ""}"><td>${esc(label[k] || k)}</td>
+        <td class="num">${ci(v.all)}</td><td class="num">${ci(v.no_score)}</td><td class="num">${ci(v.self_employed)}</td></tr>`).join("")}
+      </table></div>`;
+
+    $("#fairness").innerHTML = `<div class="table-wrap"><table>
+      <tr><th>Version</th><th class="num">Accuracy</th><th class="num">Approved who missed EMI</th><th class="num">Biggest gap between states</th><th class="num">States off by 5+ points</th></tr>
+      ${m.fairness_options.map((o: any) => `<tr class="${o.option.includes("shipped") ? "highlight" : ""}"><td class="small">${esc(
+        o.option.includes("shipped") ? "Production model (no area, branch, dealer or ID-document variables)"
+        : o.option.includes("all features") ? "Earlier model (location proxies)" : "Candidate: " + o.option + " variables")}</td>
+        <td class="num">${o.auc.toFixed(3)}</td><td class="num">${pct(o.bad_rate_approved)}</td>
+        <td class="num">${(o.max_state_gap * 100).toFixed(1)} points</td><td class="num">${o.states_flagged} / ${o.n_states}</td></tr>`).join("")}
+      </table></div>`;
+  }).catch((e) => ($("#kpis").innerHTML = `<div class="error-box" style="grid-column:1/-1">${esc(e.message)}</div>`));
+
+  async function showDoc(doc: string) {
+    $("#doc").innerHTML = `<div class="skeleton"></div>`;
+    try {
+      const d = await api("/about/" + doc);
+      const md = d.markdown.replace(/\]\(figures\//g, `](${API}/figures/`);
+      $("#doc").innerHTML = DOMPurify.sanitize(marked.parse(md) as string);
+    } catch (e: any) { $("#doc").innerHTML = `<div class="error-box">${esc(e.message)}</div>`; }
+  }
+  $$<HTMLInputElement>("#tabs input").forEach((i) => i.addEventListener("change", () => showDoc(i.value)));
+  showDoc("model_card");
+</script>

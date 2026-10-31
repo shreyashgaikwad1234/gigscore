@@ -1,0 +1,405 @@
+---
+import Layout from "../layouts/AppLayout.astro";
+import Icon from "../components/Icon.astro";
+---
+<Layout title="New application" active="apply"
+  subtitle="Capture a two-wheeler application to receive a score (300–900), a recommendation and its three principal reasons. The recommendation is previewed as the form is completed and recorded when submitted."
+  steps={["Complete the <b>case</b>, <b>loan</b>, <b>applicant</b> and <b>credit bureau</b> sections. A sample application is pre-filled.",
+          "Review the live preview, then select <b>Get decision</b> to record it and open a case in the decision queue.",
+          "A <b>referral</b> requires a credit officer's decision; approvals and declines can be confirmed or overridden with a recorded reason."]}>
+  <div class="split">
+    <form id="form" class="card" novalidate>
+      <div class="form-section">
+        <h3><span class="step">0</span> Case</h3>
+        <div class="fields">
+          <div class="field"><label for="applicant_name">Applicant name</label><input id="applicant_name" name="applicant_name" type="text" maxlength="80" value="Ganesh Waghmare" /></div>
+          <div class="field"><label for="application_id">Application no. <span class="muted">(optional)</span></label>
+            <input id="application_id" name="application_id" type="text" maxlength="40" placeholder="created for you" /></div>
+          <div class="field"><label for="branch_in">Branch</label>
+            <select id="branch_in" name="branch"><option>Pune – Hadapsar</option><option>Pune – Wakad</option><option>Mumbai – Andheri</option></select></div>
+        </div>
+        <p class="tiny muted" style="margin-top:8px">Name and branch are kept with the case; they are never used to score.</p>
+      </div>
+
+      <div class="form-section">
+        <h3><span class="step">1</span> Loan</h3>
+        <div class="fields">
+          <div class="field"><label for="disbursed_amount">Loan amount</label>
+            <div class="prefix"><span>₹</span><input id="disbursed_amount" name="disbursed_amount" type="number" min="1" value="55000" required /></div></div>
+          <div class="field"><label for="asset_cost">Vehicle price</label>
+            <div class="prefix"><span>₹</span><input id="asset_cost" name="asset_cost" type="number" min="1" value="72000" required /></div></div>
+        </div>
+        <p class="tiny muted" style="margin-top:8px">Loan is <b id="ltv">76%</b> of the vehicle price · estimated EMI: <b id="emi">–</b> a month (1.5% a month, 36 months)</p>
+      </div>
+
+      <div class="form-section">
+        <h3><span class="step">2</span> Applicant</h3>
+        <div class="fields">
+          <div class="field"><label for="age">Age</label><input id="age" name="age" type="number" min="18" max="75" value="27" required /></div>
+          <div class="field"><label for="state_id">State code <span class="muted">(optional)</span></label>
+            <input id="state_id" name="state_id" type="number" min="0" placeholder="e.g. 6" />
+            <div class="hint">Only used to check fairness later — never to decide.</div></div>
+        </div>
+        <div class="field" style="margin-top:12px"><label>Employment</label>
+          <div class="segmented">
+            <label><input type="radio" name="employment_type" value="Self employed" checked /><span>Self-employed / gig</span></label>
+            <label><input type="radio" name="employment_type" value="Salaried" /><span>Salaried</span></label>
+            <label><input type="radio" name="employment_type" value="Unknown" /><span>Not recorded</span></label>
+          </div></div>
+        <div class="field" style="margin-top:12px"><label>Documents provided</label>
+          <div class="chips">
+            <label class="chip"><input type="checkbox" name="doc_aadhar" checked /><span>Aadhaar</span></label>
+            <label class="chip"><input type="checkbox" name="doc_pan" /><span>PAN</span></label>
+            <label class="chip"><input type="checkbox" name="doc_voterid" /><span>Voter ID</span></label>
+            <label class="chip"><input type="checkbox" name="doc_driving" /><span>Driving licence</span></label>
+            <label class="chip"><input type="checkbox" name="doc_passport" /><span>Passport</span></label>
+          </div></div>
+      </div>
+
+      <div class="form-section">
+        <h3><span class="step">3</span> Credit bureau</h3>
+        <p class="small muted" style="margin:-6px 0 12px">From the CIBIL / bureau report. About half of applicants have no score — that's fine, choose why below.</p>
+        <label class="toggle"><input type="checkbox" id="has_score" /> Applicant has a bureau score</label>
+        <div class="fields" style="margin-top:12px">
+          <div class="field" id="score-field" hidden><label for="bureau_score">Bureau score (300–900)</label>
+            <input id="bureau_score" name="bureau_score" type="number" min="300" max="900" value="720" /></div>
+          <div class="field" id="status-field"><label for="bureau_status">Why there is no score</label>
+            <select id="bureau_status" name="bureau_status">
+              <option value="no_history">No bureau history at all</option>
+              <option value="thin_history">Too little history to score</option>
+              <option value="not_enough_info">Not enough information</option>
+              <option value="inactive">No recent credit activity</option>
+              <option value="no_updates_36m">No updates in 3 years</option>
+              <option value="guarantor_only">Only ever a guarantor</option>
+            </select></div>
+        </div>
+        <details class="more">
+          <summary>Existing loans and credit history (optional — leave at 0 if none)</summary>
+          <div class="fields" style="margin-top:8px">
+            <div class="field"><label>Loans taken before</label><input name="pri_no_of_accts" type="number" min="0" value="0" /></div>
+            <div class="field"><label>Still running</label><input name="pri_active_accts" type="number" min="0" value="0" /></div>
+            <div class="field"><label>Overdue now</label><input name="pri_overdue_accts" type="number" min="0" value="0" /></div>
+            <div class="field"><label>Outstanding balance</label><div class="prefix"><span>₹</span><input name="pri_current_balance" type="number" min="0" value="0" /></div></div>
+            <div class="field"><label>Total ever sanctioned</label><div class="prefix"><span>₹</span><input name="pri_sanctioned_amount" type="number" min="0" value="0" /></div></div>
+            <div class="field"><label>Current EMIs / month</label><div class="prefix"><span>₹</span><input name="primary_instal_amt" type="number" min="0" value="0" /></div></div>
+            <div class="field"><label>New loans, last 6 months</label><input name="new_accts_6m" type="number" min="0" value="0" /></div>
+            <div class="field"><label>Overdue in last 6 months</label><input name="delinq_6m" type="number" min="0" value="0" /></div>
+            <div class="field"><label>Loan enquiries</label><input name="inquiries" type="number" min="0" value="0" /></div>
+            <div class="field"><label>Credit history (months)</label><input name="credit_history_months" type="number" min="0" value="0" /></div>
+          </div>
+        </details>
+      </div>
+
+      <div class="form-section">
+        <label class="toggle"><input type="checkbox" name="synthetic" checked /> Practice application (excluded from portfolio reporting)</label>
+        <div class="btn-row">
+          <button class="btn sky" type="submit" id="submit"><Icon name="bolt" size={16} /> Get decision</button>
+          <button class="btn ghost" type="reset">Reset</button>
+        </div>
+        <div id="error" class="error-box" hidden></div>
+      </div>
+    </form>
+
+    <div class="stack">
+      <div class="card" id="result">
+        <div class="empty">
+          <Icon name="apply" />
+          <div><b>The decision will appear here</b></div>
+          <div class="small">Fill in the form and press “Get decision”.</div>
+        </div>
+      </div>
+      <div class="card" id="sim" hidden>
+        <div class="card-head"><div><h2>Sensitivity analysis</h2>
+          <p>How the recommendation would change with a different loan amount or additional KYC documents. Not recorded.</p></div></div>
+        <div class="sim-result" id="sim-result"></div>
+        <div style="margin-top:14px">
+          <div class="slider-row"><label for="sim-loan">Loan amount</label>
+            <input type="range" id="sim-loan" step="1000" /><output id="sim-loan-out"></output></div>
+          <div class="slider-row wide"><label>Down payment</label><span class="small muted" id="sim-down"></span></div>
+          <div class="slider-row wide"><label>ID documents</label>
+            <div class="chips" id="sim-docs">
+              {[["pan", "PAN"], ["voterid", "Voter ID"], ["driving", "Driving licence"], ["passport", "Passport"]].map(([k, l]) => (
+                <label class="chip"><input type="checkbox" value={k} /><span>{l}</span></label>
+              ))}
+            </div></div>
+        </div>
+        <h3 style="margin:16px 0 8px">Smallest changes that improve the recommendation</h3>
+        <div id="sim-suggest"><div class="small muted">Working it out…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2>Position in the applicant base</h2>
+          <p>Based on 98,364 real two-wheeler loans from October 2018.</p></div></div>
+        <div id="curve" class="chart"></div>
+        <div class="plain">Approving applicants in order of score, delinquency among the approved rises as the approval rate increases (left to right).
+          The marker shows where this applicant falls in that order.</div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  import { $, $$, api, getModel, pct, esc, inr, showError, BAND_COPY } from "../lib/api";
+  import { getBranch } from "../lib/workspace";
+  import { alpha, axisX, axisY, base, grad, mount, palette } from "../lib/charts";
+  import { gaugeSvg } from "../lib/gauge";
+
+  const form = $<HTMLFormElement>("#form");
+  if (getBranch()) ($<HTMLSelectElement>("#branch_in")).value = getBranch(); // the branch chosen in the workspace top bar
+
+  function updateDerived() {
+    const loan = Number(form.disbursed_amount.value), price = Number(form.asset_cost.value);
+    $("#ltv").textContent = price > 0 ? pct(loan / price, 0) : "–";
+    const r = 0.015, n = 36;
+    $("#emi").textContent = loan > 0 ? inr(Math.round((loan * r * (1 + r) ** n) / ((1 + r) ** n - 1))) : "–";
+  }
+  form.addEventListener("input", updateDerived);
+  updateDerived();
+
+  const hasScore = $<HTMLInputElement>("#has_score");
+  hasScore.addEventListener("change", () => {
+    $("#score-field").hidden = !hasScore.checked;
+    $("#status-field").hidden = hasScore.checked;
+  });
+
+  function interp(curve: any[], a: number) {
+    for (let i = 1; i < curve.length; i++) {
+      const p = curve[i - 1], q = curve[i];
+      if (a <= q.approval_rate) return p.bad_rate + ((a - p.approval_rate) / (q.approval_rate - p.approval_rate)) * (q.bad_rate - p.bad_rate);
+    }
+    return curve[curve.length - 1].bad_rate;
+  }
+
+  function drawCurve(m: any, marker?: { x: number; y: number }) {
+    mount($("#curve"), () => {
+      const c = palette();
+      const series: any[] = [
+        { type: "line", name: "Default rate among approved", showSymbol: false, smooth: true,
+          data: m.curve.map((p: any) => [p.approval_rate * 100, p.bad_rate * 100]), lineStyle: { color: c.sky, width: 3 }, itemStyle: { color: c.sky },
+          areaStyle: { color: grad(alpha(c.sky, 0.28), alpha(c.sky, 0)) } },
+        { type: "line", name: "Approve everyone", showSymbol: false, data: [[5, m.test_default_rate * 100], [100, m.test_default_rate * 100]],
+          lineStyle: { type: "dashed", color: c.muted, width: 1 }, itemStyle: { color: c.muted } },
+      ];
+      if (marker) series.push({ type: "scatter", name: "This applicant", data: [[marker.x, marker.y]], symbolSize: 16, z: 10,
+        itemStyle: { color: c.gold, borderColor: "#fff", borderWidth: 2, shadowBlur: 18, shadowColor: c.gold } });
+      return { ...base({ tooltip: { trigger: "axis", valueFormatter: (v: number) => v.toFixed(1) + "%" } }),
+        xAxis: axisX({ type: "value", min: 5, max: 100, name: "Share of applicants approved (%)", nameLocation: "middle", nameGap: 26 }),
+        yAxis: axisY({ type: "value", axisLabel: { color: c.muted, formatter: (x: number) => x + "%" } }), series };
+    });
+  }
+
+  function readForm() {
+    const f = new FormData(form);
+    const n = (k: string) => (f.get(k) === "" || f.get(k) == null ? null : Number(f.get(k)));
+    const body: any = {
+      disbursed_amount: n("disbursed_amount"), asset_cost: n("asset_cost"), age: n("age"),
+      employment_type: f.get("employment_type"), state_id: n("state_id"),
+      docs: Object.fromEntries(["aadhar", "pan", "voterid", "driving", "passport"].map((d) => [d, f.get("doc_" + d) ? 1 : 0])),
+      bureau_score: hasScore.checked ? n("bureau_score") : null,
+      bureau_status: hasScore.checked ? null : f.get("bureau_status"),
+      synthetic: !!f.get("synthetic"),
+      applicant_name: String(f.get("applicant_name") || "").trim() || null,
+      application_id: String(f.get("application_id") || "").trim() || null,
+      branch: f.get("branch"),
+    };
+    ["pri_no_of_accts", "pri_active_accts", "pri_overdue_accts", "pri_current_balance", "pri_sanctioned_amount",
+     "primary_instal_amt", "new_accts_6m", "delinq_6m", "inquiries", "credit_history_months"].forEach((k) => (body[k] = n(k) || 0));
+    return body;
+  }
+
+  // ---- live preview: the advice updates as the form is filled in; nothing is saved until "Get decision" ----
+  let saved = false, pvTimer = 0;
+  async function livePreview() {
+    if (saved) return;
+    try {
+      const [r, m] = await Promise.all([api("/score/preview", { method: "POST", body: JSON.stringify(readForm()) }), getModel()]);
+      if (saved) return;
+      const cuts = m.config.bands[r.model_used], raising = r.band !== "approve";
+      $("#result").innerHTML = `
+        <div class="note" style="margin-bottom:14px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+          <span class="small"><b>Live preview</b> — updates as you change the form. Not saved until you press “Get decision”.</span></div>
+        <div class="card-head" style="margin-bottom:6px"><div><h2>GigScore advice</h2><p>${raising ? "These are the main reasons the risk is higher." : "Within the risk you accept for approval."}</p></div>
+          <span class="badge ${esc(r.band)}" style="font-size:14px;padding:6px 14px;text-transform:none">${esc(BAND_COPY[r.band])}</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:center">
+          <div style="text-align:center">${gaugeSvg(r.score, cuts)}<div style="font-size:44px;font-weight:700;line-height:1;margin-top:4px">${r.score}</div><div class="tiny muted">out of 900</div></div>
+          <div class="stack" style="gap:10px">
+            <div><div class="tiny muted">Chance of missing the first EMI</div><div style="font-size:22px;font-weight:700">${pct(r.pd)}</div></div>
+            <div><div class="tiny muted">Safer than</div><div style="font-size:22px;font-weight:700">${pct(r.percentile, 0)}</div><div class="tiny muted">of real applicants (Oct 2018)</div></div>
+          </div></div>
+        <div class="stack" style="gap:8px;margin-top:14px">${r.reasons.map((x: string) => `<div style="display:flex;gap:10px;padding:9px 12px;border-radius:8px;background:var(--${raising ? "red" : "green"}-soft)">
+          <b style="color:var(--${raising ? "red" : "green"})">${raising ? "↑" : "↓"}</b><span>${esc(x)}</span></div>`).join("")}</div>
+        <div class="btn-row"><button class="btn sky" type="button" id="save-now">Get decision and create the case →</button></div>`;
+      $("#save-now").addEventListener("click", () => form.requestSubmit());
+      const a = 1 - r.percentile;
+      drawCurve(m, { x: Math.max(5, a * 100), y: interp(m.curve, Math.max(0.05, a)) * 100 });
+    } catch { /* an incomplete form: keep the last preview */ }
+  }
+  form.addEventListener("input", () => { clearTimeout(pvTimer); pvTimer = window.setTimeout(livePreview, 350); });
+  form.addEventListener("change", () => { clearTimeout(pvTimer); pvTimer = window.setTimeout(livePreview, 150); });
+
+  getModel().then((m) => { drawCurve(m); livePreview(); }).catch((e) => showError($("#error"), e));
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    $("#error").hidden = true;
+    const body = readForm();
+    saved = true;
+    const btn = $<HTMLButtonElement>("#submit");
+    btn.disabled = true;
+    try {
+      const [r, m] = await Promise.all([api("/score", { method: "POST", body: JSON.stringify(body) }), getModel()]);
+      const cuts = m.config.bands[r.model_used];
+      const raising = r.band !== "approve";
+      $("#result").innerHTML = `
+        <div class="card-head" style="margin-bottom:6px"><div><h2>Decision</h2><p>${raising ? "Look at the reasons below before deciding." : "Within the risk you accept for approval."}</p></div>
+          <span class="badge ${esc(r.band)}" style="font-size:14px;padding:6px 14px;text-transform:none">${esc(BAND_COPY[r.band] || r.band)}</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:center">
+          <div style="text-align:center">${gaugeSvg(r.score, cuts)}
+            <div class="display" style="font-size:46px;font-weight:800;letter-spacing:-.04em;line-height:1;margin-top:4px">${esc(r.score)}</div>
+            <div class="tiny muted">GigScore, out of 900</div></div>
+          <div class="stack" style="gap:10px">
+            <div><div class="tiny muted">Chance of missing the first EMI</div><div style="font-size:22px;font-weight:700">${pct(r.pd)}</div></div>
+            <div><div class="tiny muted">Safer than</div><div style="font-size:22px;font-weight:700">${pct(r.percentile, 0)}</div>
+              <div class="tiny muted">of October 2018 applicants</div></div>
+            <div class="tiny muted">Approve from ${cuts.approve} · credit officer ${cuts.refer}–${cuts.approve - 1} · decline below ${cuts.refer}</div>
+          </div></div>
+        <h3 style="margin:16px 0 8px">${raising ? "Main reasons the risk is higher" : "Main reasons this looks safe"}</h3>
+        <div class="stack" style="gap:8px">${r.reasons.map((x: string) => `
+          <div style="display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--${raising ? "red" : "green"}-soft)">
+            <span style="color:var(--${raising ? "red" : "green"});font-weight:800">${raising ? "↑" : "↓"}</span><span>${esc(x)}</span></div>`).join("")}</div>
+        ${r.note ? `<div class="error-box">${esc(r.note)}</div>` : ""}
+        <div class="note" style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <span class="small">Case <b>${esc(r.application_id)}</b> created${body.synthetic ? " (practice)" : ""} — it is in the inbox until an officer decides.</span>
+          <a class="btn sm" href="/app/case?id=${encodeURIComponent(r.application_id)}">Open case →</a></div>
+        <p class="tiny muted" style="margin-top:8px">Decision id <code>${esc(r.explain_id)}</code> · model ${esc(r.model_version)}</p>
+        <form class="officer-box" id="officer">
+          <h3>Credit officer's decision</h3>
+          <p class="small muted" style="margin-top:4px">${r.band === "refer"
+            ? "GigScore has sent this application to you. Your decision is needed."
+            : "GigScore advises; you decide. If you go against its advice, say why — it is recorded."}</p>
+          <div class="segmented" style="margin-top:12px">
+            <label><input type="radio" name="decision" value="approve" ${r.band === "approve" ? "checked" : ""} /><span>Approve</span></label>
+            <label><input type="radio" name="decision" value="decline" ${r.band === "decline" ? "checked" : ""} /><span>Decline</span></label>
+          </div>
+          <div class="fields" style="margin-top:12px">
+            <div class="field"><label>Officer name / ID</label><input name="officer" type="text" required minlength="2" placeholder="e.g. R. Patil, CO-114" /></div>
+          </div>
+          <div class="field" style="margin-top:12px"><label>Reason</label>
+            <textarea name="reason" class="plain-text" rows="2" required minlength="10" placeholder="e.g. Verified 6 months of UPI payouts from the delivery platform"></textarea></div>
+          <div class="btn-row" style="margin-top:12px"><button class="btn" type="submit">Record decision</button></div>
+          <div id="officer-msg" hidden></div>
+        </form>`;
+      wireOfficer(r.explain_id, r.band);
+      startSim(body, r);
+      const a = 1 - r.percentile;
+      drawCurve(m, { x: Math.max(5, a * 100), y: interp(m.curve, Math.max(0.05, a)) * 100 });
+    } catch (e) {
+      showError($("#error"), e);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // ---- credit officer's final decision (GigScore advises, the officer decides) ----
+  function wireOfficer(id: string, band: string) {
+    const f = $<HTMLFormElement>("#officer");
+    try { (f.elements.namedItem("officer") as HTMLInputElement).value = localStorage.getItem("gigscore-officer") || ""; } catch { /* no storage */ }
+    f.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const d = new FormData(f);
+      const msg = $("#officer-msg");
+      if (!d.get("decision")) { msg.className = "error-box"; msg.textContent = "Choose approve or decline."; msg.hidden = false; return; }
+      try {
+        try { localStorage.setItem("gigscore-officer", String(d.get("officer"))); } catch { /* no storage */ }
+        const a = await api(`/decisions/${id}/final`, { method: "POST", body: JSON.stringify(
+          { decision: d.get("decision"), reason: d.get("reason"), officer: d.get("officer") }) });
+        msg.className = a.override ? "note" : "ok-box";
+        msg.innerHTML = a.override
+          ? `<b>Recorded as an override.</b> GigScore advised <b>${esc(BAND_COPY[band])}</b>; ${esc(a.officer)} decided <b>${esc(a.status)}</b>. Overrides are tracked under Decisions.`
+          : `<b>Recorded.</b> ${esc(a.officer)} decided <b>${esc(a.status)}</b>${band === "refer" ? " after review" : ", in line with GigScore"}.`;
+        msg.hidden = false;
+      } catch (e) { msg.className = "error-box"; showError(msg, e); }
+    });
+  }
+
+  // ---- what would change this decision? (unlogged previews) ----
+  const BAND_RANK: Record<string, number> = { decline: 0, refer: 1, approve: 2 };
+  const DOC_NAME: Record<string, string> = { pan: "PAN", voterid: "Voter ID", driving: "Driving licence", passport: "Passport" };
+  let simBase: any = null, simOrig: any = null, simTimer = 0;
+  const preview = (b: any) => api("/score/preview", { method: "POST", body: JSON.stringify(b) });
+  const badge = (band: string) => `<span class="badge ${band}" style="text-transform:none">${esc(BAND_COPY[band])}</span>`;
+
+  function simBody() {
+    const docs = { ...simBase.docs };
+    $$<HTMLInputElement>("#sim-docs input").forEach((i) => (docs[i.value] = i.checked ? 1 : 0));
+    return { ...simBase, docs, disbursed_amount: Number($<HTMLInputElement>("#sim-loan").value), synthetic: true };
+  }
+  function simLabels() {
+    const loan = Number($<HTMLInputElement>("#sim-loan").value), price = simBase.asset_cost;
+    $("#sim-loan-out").textContent = inr(loan);
+    $("#sim-down").textContent = `${inr(price - loan)} upfront (${pct(1 - loan / price, 0)} of the vehicle price)`;
+  }
+  async function simRun() {
+    simLabels();
+    const p = await preview(simBody());
+    const d = p.score - simOrig.score;
+    $("#sim-result").innerHTML = `<div><div class="small muted">With these changes</div>
+        <div style="display:flex;align-items:baseline;gap:12px"><span class="sim-score">${p.score}</span>
+        <span class="${d > 0 ? "delta-up" : d < 0 ? "delta-down" : "muted"}">${d > 0 ? "+" : ""}${d} points</span></div>
+        <div class="tiny muted">Chance of missing the first EMI: ${pct(p.pd)} (was ${pct(simOrig.pd)})</div></div>${badge(p.band)}`;
+  }
+  function startSim(body: any, r: any) {
+    simBase = body; simOrig = r;
+    const s = $<HTMLInputElement>("#sim-loan");
+    s.min = String(Math.round(body.asset_cost * 0.3 / 1000) * 1000);
+    s.max = String(Math.max(Math.round(body.asset_cost / 1000) * 1000, body.disbursed_amount));
+    s.value = String(body.disbursed_amount);
+    $$<HTMLInputElement>("#sim-docs input").forEach((i) => (i.checked = !!body.docs[i.value]));
+    $("#sim").hidden = false;
+    simRun();
+    suggestions();
+  }
+  $<HTMLInputElement>("#sim-loan").addEventListener("input", () => { simLabels(); clearTimeout(simTimer); simTimer = window.setTimeout(simRun, 200); });
+  $$<HTMLInputElement>("#sim-docs input").forEach((i) => i.addEventListener("change", simRun));
+
+  async function suggestions() {
+    const out: { text: string; band: string; score: number; apply: () => void }[] = [];
+    const target = simOrig.band === "approve" ? null : simOrig.band === "decline" ? "refer" : "approve";
+    // 1. largest loan that still reaches the next band up (binary search on the loan amount)
+    if (target) {
+      let lo = Math.round(simBase.asset_cost * 0.3 / 1000) * 1000, hi = simBase.disbursed_amount, best: any = null;
+      const reaches = async (loan: number) => { const p = await preview({ ...simBase, disbursed_amount: loan }); return BAND_RANK[p.band] >= BAND_RANK[target] ? p : null; };
+      const atLo = await reaches(lo);
+      if (atLo) {
+        best = { loan: lo, p: atLo };
+        while (hi - lo > 1000) {
+          const mid = Math.round((lo + hi) / 2000) * 1000;
+          if (mid === lo || mid === hi) break;
+          const p = await reaches(mid);
+          if (p) { lo = mid; best = { loan: mid, p }; } else hi = mid;
+        }
+        const b = best;
+        out.push({ text: `Lower the loan to <b>${inr(b.loan)}</b> — the customer pays <b>${inr(simBase.asset_cost - b.loan)}</b> upfront (${inr(simBase.disbursed_amount - b.loan)} more)`,
+          band: b.p.band, score: b.p.score, apply: () => { $<HTMLInputElement>("#sim-loan").value = String(b.loan); simRun(); } });
+      }
+    }
+    // 2. each ID document the applicant has not given yet
+    for (const k of Object.keys(DOC_NAME).filter((k) => !simBase.docs[k])) {
+      const p = await preview({ ...simBase, docs: { ...simBase.docs, [k]: 1 } });
+      if (p.score > simOrig.score)
+        out.push({ text: `Also provide <b>${DOC_NAME[k]}</b>`, band: p.band, score: p.score,
+          apply: () => { const i = $<HTMLInputElement>(`#sim-docs input[value="${k}"]`); i.checked = true; simRun(); } });
+    }
+    out.sort((a, b) => BAND_RANK[b.band] - BAND_RANK[a.band] || b.score - a.score);
+    $("#sim-suggest").innerHTML = out.length ? out.slice(0, 4).map((s, i) => `<div class="suggest"><span class="small">${s.text}</span>
+        <span style="display:flex;gap:10px;align-items:center;flex:none"><span class="small"><b>${s.score}</b></span>${badge(s.band)}
+        <button type="button" class="btn ghost sm" data-i="${i}">Try</button></span></div>`).join("")
+      : `<div class="small muted">${simOrig.band === "approve" ? "Already approved — no change needed." : "No single change to the loan size or documents moves this application up. A credit officer should review it."}</div>`;
+    $$<HTMLButtonElement>("#sim-suggest button").forEach((btn) => btn.addEventListener("click", () => out[Number(btn.dataset.i)].apply()));
+  }
+
+  // Demo link: /apply?example=1 scores the pre-filled example (logged as a test application).
+  if (new URLSearchParams(location.search).get("example")) {
+    (form.elements.namedItem("synthetic") as HTMLInputElement).checked = true;
+    form.requestSubmit();
+  }
+</script>

@@ -1,0 +1,147 @@
+---
+import Layout from "../layouts/AppLayout.astro";
+import Icon from "../components/Icon.astro";
+---
+<Layout title="Policy settings" active="admin"
+  subtitle="Approval cut-offs, monthly recalibration, the fallback scorecard and early-warning thresholds, managed by the risk function. Changes take effect immediately and are recorded with the reason given."
+  steps={["Enter the administrator credential and select <b>Unlock</b>.",
+          "Test a proposed cut-off in the <a href='/analytics#playground'>policy simulator</a> first; its <b>Apply in policy settings</b> link pre-fills this form.",
+          "Record the reason for the change. Every change is listed in the <b>change log</b>."]}>
+  <div class="card" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+    <div class="field" style="flex:1;min-width:240px"><label for="token">Admin password</label>
+      <input id="token" type="password" autocomplete="off" placeholder="the ADMIN_TOKEN set on the server" /></div>
+    <button class="btn ghost" id="unlock"><Icon name="shield" size={16} /> Unlock</button>
+    <span id="token-state" class="pill-status">Locked</span>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:16px">
+    <form class="card" id="settings">
+      <div class="card-head"><div><h2>How strict to be</h2><p>A higher number means fewer approvals, but fewer missed EMIs.</p></div></div>
+      <div class="field"><label>Version in use</label>
+        <div class="segmented">
+          <label><input type="radio" name="model" value="lgbm_fair" /><span>Fair across states (recommended)</span></label>
+          <label><input type="radio" name="model" value="lgbm_combined" /><span>Uses location (slightly more accurate)</span></label>
+        </div></div>
+      <div class="fields" style="margin-top:14px">
+        <div class="field"><label>Approve from score</label><input name="approve" type="number" min="300" max="900" /></div>
+        <div class="field"><label>Refer to credit officer from score</label><input name="refer" type="number" min="300" max="900" />
+          <div class="hint">Below this, the advice is decline.</div></div>
+        <div class="field"><label>Risk adjustment (advanced)</label><input name="calibration_offset" type="number" step="0.01" min="-3" max="3" />
+          <div class="hint">Nudges every predicted risk up or down. 0 = no change. Update monthly from the latest repaid loans.</div></div>
+      </div>
+      <div style="margin-top:14px"><label class="toggle"><input type="checkbox" name="force_fallback" /> Emergency switch — use the simple backup scorecard</label></div>
+      <div class="field" style="margin-top:14px"><label>Reason for the change</label><input name="reason" type="text" required minlength="3" placeholder="e.g. monthly recalibration, Nov 2026" /></div>
+      <div class="btn-row"><button class="btn" type="submit">Apply settings</button></div>
+      <div id="settings-msg" hidden></div>
+    </form>
+
+    <form class="card" id="rules">
+      <div class="card-head"><div><h2>Early-warning rules</h2><p>The limits for the six warning signs. Change a number and save — the next check uses it.</p></div></div>
+      <textarea name="rules" rows="16" spellcheck="false"></textarea>
+      <div class="field" style="margin-top:12px"><label>Reason for the change</label><input name="reason" type="text" required minlength="3" /></div>
+      <div class="btn-row">
+        <button class="btn" type="submit">Save rules</button>
+        <button class="btn ghost" type="button" id="reload">Reload model files</button>
+      </div>
+      <div id="rules-msg" hidden></div>
+    </form>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-head"><div><h2>Change log</h2><p>Every settings change, newest first.</p></div></div>
+    <div id="changes"><div class="empty small">Unlock with the admin password to see changes.</div></div>
+  </div>
+</Layout>
+
+<script>
+  import { $, api, getModel, esc } from "../lib/api";
+
+  const token = $<HTMLInputElement>("#token");
+  try { token.value = sessionStorage.getItem("gigscore_admin") || ""; } catch { /* storage unavailable */ }
+  const headers = () => ({ "X-Admin-Token": token.value });
+  const settings = $<HTMLFormElement>("#settings"), rules = $<HTMLFormElement>("#rules");
+
+  function msg(id: string, ok: boolean, text: string) {
+    const el = $(id);
+    el.className = ok ? "ok-box" : "error-box";
+    el.textContent = text;
+    el.hidden = false;
+  }
+
+  async function load() {
+    const m = await getModel(true);
+    const c = m.config;
+    (settings.querySelector(`input[name=model][value=${c.model}]`) as HTMLInputElement).checked = true;
+    settings.approve.value = c.bands[c.model].approve;
+    settings.refer.value = c.bands[c.model].refer;
+    settings.calibration_offset.value = c.calibration_offset ?? 0;
+    settings.force_fallback.checked = !!c.force_fallback;
+    rules.rules.value = JSON.stringify(m.watch_rules, null, 2);
+    settings.querySelectorAll<HTMLInputElement>("input[name=model]").forEach((r) => r.addEventListener("change", () => {
+      const b = c.bands[r.value];
+      if (b) { settings.approve.value = b.approve; settings.refer.value = b.refer; }
+    }));
+    // arriving from the cut-off playground on Results: pre-fill (not saved until "Apply settings")
+    const q = new URLSearchParams(location.search);
+    if (q.get("approve") && q.get("refer")) {
+      settings.approve.value = q.get("approve")!;
+      settings.refer.value = q.get("refer")!;
+      settings.reason.value = "Cut-offs chosen in the cut-off playground on the Results page";
+      msg("#settings-msg", true, `Pre-filled from the playground: approve from ${q.get("approve")}, credit officer from ${q.get("refer")}. Unlock and press “Apply settings” to make it live.`);
+    }
+  }
+
+  async function changes() {
+    if (!token.value) return;
+    try {
+      const ch = await api("/admin/changes", { headers: headers() });
+      $("#token-state").textContent = "Unlocked";
+      $("#token-state").className = "pill-status ok";
+      $("#changes").innerHTML = ch.length ? `<div class="table-wrap"><table><tr><th>When (UTC)</th><th>Change</th><th>Reason</th></tr>
+        ${ch.map((d: any) => `<tr><td>${esc(d.ts.replace("T", " "))}</td><td><span class="badge config">${esc(d.outcome.replaceAll("_", " "))}</span></td>
+          <td>${esc(d.inputs.reason || "")}</td></tr>`).join("")}</table></div>`
+        : `<div class="empty small">No changes yet.</div>`;
+    } catch (e: any) {
+      $("#token-state").textContent = e.message;
+      $("#token-state").className = "pill-status err";
+    }
+  }
+
+  $("#unlock").addEventListener("click", () => {
+    try { sessionStorage.setItem("gigscore_admin", token.value); } catch { /* ignore */ }
+    changes();
+  });
+
+  settings.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const f = new FormData(settings);
+    try {
+      await api("/admin/thresholds", { method: "PUT", headers: headers(), body: JSON.stringify({
+        model: f.get("model"), approve: Number(f.get("approve")), refer: Number(f.get("refer")),
+        calibration_offset: Number(f.get("calibration_offset") || 0), force_fallback: !!f.get("force_fallback"), reason: f.get("reason") }) });
+      msg("#settings-msg", true, "Saved — new applications use these settings now.");
+      await load(); changes();
+    } catch (e: any) { msg("#settings-msg", false, e.message); }
+  });
+
+  rules.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    try {
+      const body = { rules: JSON.parse(rules.rules.value), reason: rules.reason.value };
+      await api("/admin/watch-rules", { method: "PUT", headers: headers(), body: JSON.stringify(body) });
+      msg("#rules-msg", true, "Saved — the next check uses these rules.");
+      changes();
+    } catch (e: any) { msg("#rules-msg", false, e.message); }
+  });
+
+  $("#reload").addEventListener("click", async () => {
+    try {
+      const r = await api("/admin/reload", { method: "POST", headers: headers() });
+      msg("#rules-msg", true, "Reloaded: " + Object.values(r.reloaded).join(", "));
+      changes();
+    } catch (e: any) { msg("#rules-msg", false, e.message); }
+  });
+
+  load().catch((e) => msg("#settings-msg", false, e.message));
+  changes();
+</script>

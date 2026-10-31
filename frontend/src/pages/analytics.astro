@@ -1,0 +1,409 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+<Layout title="Validation on unseen loans" active="analytics"
+  photo="mumbai-street" photoAlt="A busy Mumbai street full of taxis and people"
+  subtitle="GigScore was developed on August–September 2018 originations and validated out-of-time on all 98,364 October 2018 applications, against whether each borrower paid the first EMI."
+  steps={["The four headline measures summarise performance on the unseen month.",
+          "The policy simulator shows how any cut-off would have performed, and can be carried into policy settings.",
+          "Each analysis states what it means for the portfolio; hover for exact values. The selector compares the production model with the earlier model."]}
+  next={{ title: "How the model is governed", text: "Inputs, exclusions, fairness testing, monitoring and the fallback scorecard — documented for risk and compliance review.",
+          href: "/about", cta: "Read the governance documentation", alt: ["/pilot", "Plan a pilot"] }}>
+  <div slot="actions" class="segmented" id="model-pick" style="margin-top:18px">
+    <label><input type="radio" name="m" value="lgbm_fair" checked /><span>Production model</span></label>
+    <label><input type="radio" name="m" value="lgbm_combined" /><span>Earlier model (with location proxies)</span></label>
+  </div>
+
+  <section class="grid cols-4 reveal" id="kpis">
+    {[0, 1, 2, 3].map(() => <div class="card kpi"><div class="skeleton" style="width:55%"></div><div class="skeleton" style="height:34px;margin-top:12px"></div></div>)}
+  </section>
+
+  <section class="card section reveal" style="margin-top:20px" id="playground">
+    <div class="card-head"><div><h2>Policy simulator</h2>
+      <p>Adjust the cut-offs to see how the 98,364 October 2018 applications would have been decided, and how those loans performed.</p></div>
+      <a class="btn ghost sm" id="pg-apply" href="/admin">Apply in policy settings →</a></div>
+    <div class="split" style="gap:28px;align-items:start">
+      <div>
+        <div class="slider-row"><label for="pg-approve">Approve from score</label><input type="range" id="pg-approve" min="480" max="720" step="1" /><output id="pg-approve-out"></output></div>
+        <div class="slider-row"><label for="pg-refer">Credit officer from</label><input type="range" id="pg-refer" min="480" max="720" step="1" /><output id="pg-refer-out"></output></div>
+        <div class="stat-grid" style="margin-top:16px" id="pg-stats" data-nocount></div>
+        <div class="plain gold" id="pg-plain"></div>
+      </div>
+      <div>
+        <div class="small muted" style="margin-bottom:4px">Approval rate in each state at these cut-offs (red = more than 5 points from the average)</div>
+        <div id="c-pg-states" class="chart" style="height:400px"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid cols-2 section reveal" style="margin-top:20px">
+    <div class="card">
+      <div class="card-head"><div><h2>Discrimination: GigScore versus the bureau score</h2>
+        <p>Share of first-EMI misses identified (vertical) against good borrowers incorrectly flagged (horizontal).</p></div>
+        <div class="segmented" id="roc-pick"><label><input type="radio" name="r" value="all" checked /><span>Everyone</span></label>
+          <label><input type="radio" name="r" value="ns" /><span>No credit score</span></label></div></div>
+      <div id="c-roc" class="chart tall"></div>
+      <div class="plain">The dashed diagonal represents a random decision; the further a curve lies towards the top-left, the stronger the discrimination.
+        Switch to “No credit score”: the bureau line sits on the diagonal, GigScore's doesn't.</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Capture of first-EMI misses</h2>
+        <p>Share of all first-EMI misses captured when the lowest scores are declined first.</p></div></div>
+      <div id="c-gains" class="chart tall"></div>
+      <p class="plain mint" id="gains-note"></p>
+    </div>
+  </section>
+
+  <section class="card section reveal" style="margin-top:20px">
+    <div class="card-head"><div><h2>Score distribution by outcome</h2>
+      <p>Every October 2018 applicant, by score, with today's decline / credit officer / approve zones.</p></div></div>
+    <div id="c-hist" class="chart tall"></div>
+    <div class="plain gold">People who missed their first EMI (red) bunch towards lower scores; people who paid sit further right.
+      They overlap — no score can split them perfectly — which is why the middle zone goes to a credit officer.</div>
+  </section>
+
+  <section class="grid cols-2 reveal" style="margin-top:20px">
+    <div class="card">
+      <div class="card-head"><div><h2>First-EMI delinquency by score decile</h2>
+        <p>Applicants cut into ten equal groups by score. Bars = what really happened; line = what GigScore expected.</p></div></div>
+      <div id="c-deciles" class="chart tall"></div>
+      <div class="plain gold">Each step down in score means more missed EMIs — the ranking holds on loans the model never saw.</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Decision flow to first-EMI outcome</h2>
+        <p>Every October application, through its decision, to whether the first EMI was paid.</p></div></div>
+      <div id="c-flow" class="chart tall"></div>
+      <div class="plain">Follow the coloured streams. Most approved loans flow to “paid”; a much bigger share of declined ones flow to “missed”.</div>
+    </div>
+  </section>
+
+  <section class="grid cols-2 reveal" style="margin-top:20px">
+    <div class="card">
+      <div class="card-head"><div><h2>Approval rate versus delinquency</h2>
+        <p>How many approved borrowers miss the first EMI as you approve more people.</p></div></div>
+      <div id="c-approval" class="chart tall"></div>
+      <div class="plain">Pick how many applicants you want to approve on the bottom axis and read off the risk.
+        A lower line means more loans for the same risk — GigScore sits below the bureau-only line.</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Calibration: predicted versus actual</h2>
+        <p>Each dot is one score group. On the diagonal = when GigScore says 20%, it really was 20%.</p></div></div>
+      <div id="c-cal" class="chart tall"></div>
+      <div class="plain rose">October was a worse month than the training months, so real missed EMIs came in a few points above what was expected.
+        The <b>risk adjustment</b> in Settings corrects for this each month.</div>
+    </div>
+  </section>
+
+  <section class="grid cols-2 reveal" style="margin-top:20px">
+    <div class="card">
+      <div class="card-head"><div><h2>Discrimination by segment</h2>
+        <p>AUC of GigScore and of bureau data alone (0.5 = random, 1.0 = perfect).</p></div></div>
+      <div id="c-seg" class="chart"></div>
+      <div class="plain mint">The biggest gain is for applicants with <b>no credit score</b> — exactly where the bureau can't help.</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Volume and delinquency by month</h2>
+        <p>August and September taught the model; October tested it.</p></div></div>
+      <div id="c-months" class="chart"></div>
+      <div class="plain">October had more loans and more missed EMIs than the months before — a tougher test than usual.</div>
+    </div>
+  </section>
+
+  <section class="grid cols-2 reveal" style="margin-top:20px">
+    <div class="card">
+      <div class="card-head"><div><h2>Drivers of the score</h2>
+        <p>How much each piece of information moves a decision, on average.</p></div></div>
+      <div id="c-shap" class="chart tall"></div>
+      <div class="plain">The top bars are what your credit officers should look at first — they decide most cases.</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Predictive strength of individual variables</h2>
+        <p>Grey bars were deliberately left out because they stood in for location.</p></div></div>
+      <div id="c-iv" class="chart tall"></div>
+      <div class="plain gold">Some of the strongest clues (dealer, area, branch) were dropped on purpose. They predicted well only because they told the model where someone lives.</div>
+    </div>
+  </section>
+
+  <section class="card section reveal" style="margin-top:20px">
+    <div class="card-head"><div><h2>Approval rate by state</h2>
+      <p>If the safest 60% of October applicants are approved. States run from lowest real default rate (top) to highest.</p></div></div>
+    <div id="c-states" class="chart" style="height:520px"></div>
+    <div class="plain mint">With the production model, approval rates in most states are closely grouped. The earlier model approved some states far more often than others, driven by location proxies rather than repayment behaviour.</div>
+  </section>
+</Layout>
+
+<script>
+  import { $, $$, esc, getAnalytics, getModel, num, pct } from "../lib/api";
+  import { alpha, axisX, axisY, base, grad, hgrad, mount, palette } from "../lib/charts";
+
+  const NAMES: Record<string, string> = {
+    ltv: "Loan as % of vehicle price", bureau_score: "Credit-bureau score", manufacturer_te: "Vehicle make's track record", dob_jan1: "Birth date recorded only roughly",
+    employment_self: "Self-employed", disb_day: "Day of the month", score_desc_grp: "Bureau grade / why no score", new_emi_est: "Size of the new EMI",
+    pri_sanctioned_amount: "Size of past loans", total_emi: "All EMIs together", pri_no_accts: "Number of past loans", hist_len_m: "Length of credit history",
+    inquiries: "Recent loan enquiries", pri_current_balance: "Amount still owed", delinq_6m: "Late payments, last 6 months", supplier_te: "Dealer's track record",
+    pincode_te: "Area's track record", branch_te: "Branch's track record", down_payment_share: "Down payment", pri_disbursed_amount: "Past loans paid out",
+    branch_n: "Branch size", acct_age_m: "Age of credit accounts", asset_cost_log: "Vehicle price", leverage: "Share of credit still owed", overdue_ratio: "Share of loans overdue",
+    pri_active_accts: "Loans still running", existing_emi: "Existing EMIs", new_accts_6m: "New loans, last 6 months", disb_weekday: "Day of the week",
+  };
+  const nice = (f: string) => NAMES[f] || f;
+
+  // ---- cut-off playground: exact counts per score from the October 2018 test ----
+  function playground(m: any, A: any) {
+    const B = A.by_score, N = A.n_test, totalMissed = B.missed.reduce((s: number, x: number) => s + x, 0);
+    const ap = $<HTMLInputElement>("#pg-approve"), rf = $<HTMLInputElement>("#pg-refer");
+    const today = m.config.bands[m.model];
+    ap.value = String(today.approve); rf.value = String(today.refer);
+    const at = (cut: number, arr: number[]) => B.score.reduce((s: number, sc: number, i: number) => s + (sc >= cut ? arr[i] : 0), 0);
+    const bureauAt = (bad: number) => { // bureau-only approval rate with the same missed-EMI rate among the approved
+      const xs = A.approval.x, ys = A.approval.lgbm_bureau;
+      for (let i = 1; i < xs.length; i++) if (ys[i] >= bad) return xs[i - 1] + (xs[i] - xs[i - 1]) * (bad - ys[i - 1]) / ((ys[i] - ys[i - 1]) || 1);
+      return 1;
+    };
+    const stat = (l: string, v: string, s: string) => `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    const sign = (x: number, d = 1) => (x > 0 ? "+" : x < 0 ? "−" : "±") + Math.abs(x).toFixed(d);
+    function draw() {
+      if (Number(rf.value) > Number(ap.value)) rf.value = ap.value;
+      const a = Number(ap.value), r = Number(rf.value);
+      $("#pg-approve-out").textContent = String(a); $("#pg-refer-out").textContent = String(r);
+      const nA = at(a, B.n), mA = at(a, B.missed), nR = at(r, B.n) - nA, mD = totalMissed - at(r, B.missed);
+      const nT = at(today.approve, B.n), mT = at(today.approve, B.missed);
+      const bad = nA ? mA / nA : 0, bureau = bureauAt(bad);
+      const st = Object.entries(B.states).map(([s, arr]: [string, any]) => {
+        const tot = arr.reduce((x: number, y: number) => x + y, 0);
+        return { s, rate: B.score.reduce((x: number, sc: number, i: number) => x + (sc >= a ? arr[i] : 0), 0) / tot };
+      });
+      const avg = nA / N, off = st.filter((x) => Math.abs(x.rate - avg) > 0.05).length;
+      const spread = Math.max(...st.map((x) => x.rate)) - Math.min(...st.map((x) => x.rate));
+      $("#pg-stats").innerHTML = [
+        stat("Approved", pct(nA / N), `${num(nA)} loans · ${sign((nA - nT) / N * 100)} pts vs today`),
+        stat("Approved who missed 1st EMI", pct(bad), `${sign((bad - (nT ? mT / nT : 0)) * 100)} pts vs today`),
+        stat("To credit officer", pct(nR / N), `${num(nR)} applications to review`),
+        stat("Missed EMIs avoided", pct(mD / totalMissed, 0), `of all missed first EMIs were declined`),
+      ].join("");
+      $("#pg-plain").innerHTML = `Out of every 1,000 applicants you would approve <b>${Math.round(nA / N * 1000)}</b>;
+        about <b>${Math.round(mA / N * 1000)}</b> of them would miss the first EMI. The credit bureau score alone, at the same risk, would approve only
+        <b>${Math.round(bureau * 1000)}</b> — so GigScore adds <b>${Math.max(0, Math.round((nA / N - bureau) * 1000))}</b> loans per 1,000 applicants.
+        States: approval rates differ by up to ${(spread * 100).toFixed(0)} points; ${off} of ${st.length} are more than 5 points from the average.`;
+      ($("#pg-apply") as HTMLAnchorElement).href = `/admin?approve=${a}&refer=${r}`;
+      const rows = st.sort((x, y) => x.rate - y.rate);
+      mount($("#c-pg-states"), () => {
+        const c = palette();
+        return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => pct(v) + " approved" },
+            grid: { left: 4, right: 20, top: 24, bottom: 4, containLabel: true } }), legend: { show: false }, animationDuration: 250,
+          xAxis: axisX({ type: "value", min: 0, max: 1, axisLabel: { color: c.muted, formatter: (v: number) => pct(v, 0) } }),
+          yAxis: axisY({ type: "category", data: rows.map((x) => "State " + x.s), axisLabel: { color: c.muted, fontSize: 10.5 } }),
+          series: [{ type: "bar", barWidth: 10, data: rows.map((x) => ({ value: x.rate, itemStyle: { borderRadius: 3,
+              color: Math.abs(x.rate - avg) > 0.05 ? c.rose : c.sky } })),
+            markLine: { silent: true, symbol: "none", lineStyle: { color: c.text2, type: "dashed" }, label: { color: c.text2, formatter: `average ${pct(avg, 0)}` },
+              data: [{ xAxis: avg }] } }] };
+      });
+    }
+    let t = 0;
+    [ap, rf].forEach((el) => el.addEventListener("input", () => { cancelAnimationFrame(t); t = requestAnimationFrame(draw); }));
+    draw();
+  }
+
+  Promise.all([getModel(), getAnalytics()]).then(([m, A]) => {
+    playground(m, A);
+    // short legend names; "earlier version" (uses location) is explained in the page text
+    A.labels = { ...A.labels, lgbm_fair: "Production model", lgbm_combined: "Earlier model",
+      scorecard_fair: "Fallback scorecard", lgbm_bureau: "Bureau data only" };
+    const pick = () => ($<HTMLInputElement>("#model-pick input:checked")).value;
+    const draw = () => {
+      const sel = pick();
+      const M = m.metrics[sel];
+      const ex = m.extra_approvals.find((r: any) => Math.abs(r.bureau_only_approval - 0.6) < 1e-6) || m.extra_approvals[0];
+      const g20 = A.gains[sel][10];
+      $("#kpis").innerHTML = [
+        ["AUC · all applicants", M.all.auc.toFixed(2), `0.5 = random, 1.0 = perfect (95% interval ${M.all.auc_lo.toFixed(2)}–${M.all.auc_hi.toFixed(2)})`, "sky"],
+        ["AUC · new to credit", M.no_score.auc.toFixed(2), `<span class="delta">+${(M.no_score.auc - m.metrics.lgbm_bureau.no_score.auc).toFixed(2)}</span> above bureau data alone`, "gold"],
+        ["First-EMI misses captured", pct(g20, 0), "of all first-EMI misses fall in the lowest-scored 20%", "mint"],
+        ["Additional approvals at equal risk", "+" + num(ex.extra), `versus a bureau-only policy at the same delinquency`, ""],
+      ].map(([l, v, s, t]) => `<div class="card kpi"><div class="label">${esc(l)}</div><div class="value ${t}">${esc(v)}</div><div class="sub">${s}</div></div>`).join("");
+      $("#gains-note").innerHTML = `If you decline the lowest-scored <b>20%</b> of applicants, you avoid <b>${pct(g20, 0)}</b> of all missed first EMIs. Declining people at random would avoid only 20%.`;
+      rocChart(A, sel); gainsChart(A, sel); approvalChart(A, sel);
+    };
+    $$<HTMLInputElement>("#model-pick input").forEach((i) => i.addEventListener("change", draw));
+    $$<HTMLInputElement>("#roc-pick input").forEach((i) => i.addEventListener("change", () => rocChart(A, pick())));
+    draw();
+    histChart(A); decileChart(A); flowChart(A); calChart(A); segChart(A); monthChart(A); shapChart(A); ivChart(A); statesChart(A);
+  }).catch((e) => ($("#kpis").innerHTML = `<div class="error-box" style="grid-column:1/-1">${esc(e.message)}</div>`));
+
+  const COL = () => { const c = palette(); return { lgbm_fair: c.sky, lgbm_combined: c.gold, scorecard_fair: c.violet, lgbm_bureau: c.faint } as Record<string, string>; };
+
+  function rocChart(A: any, sel: string) {
+    const ns = ($<HTMLInputElement>("#roc-pick input:checked")).value === "ns";
+    const R = ns ? A.roc_no_score : A.roc;
+    mount($("#c-roc"), () => {
+      const c = palette(), col = COL();
+      return { ...base({ tooltip: { trigger: "item", formatter: (p: any) => `${p.seriesName}<br/>caught ${pct(p.value[1], 0)} · false alarms ${pct(p.value[0], 0)}` } }),
+        legend: { ...base().legend, formatter: (n: string) => { const k = Object.keys(A.labels).find((x) => A.labels[x] === n); return k ? `${n}  ${R[k].auc.toFixed(3)}` : n; } },
+        xAxis: axisX({ type: "value", min: 0, max: 1, name: "Good borrowers flagged", nameLocation: "middle", nameGap: 26, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        yAxis: axisY({ type: "value", min: 0, max: 1, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        series: [...Object.entries(R).map(([k, r]: [string, any]) => ({ type: "line", name: A.labels[k], showSymbol: false, smooth: true, z: k === sel ? 5 : 2,
+          data: r.fpr.map((x: number, i: number) => [x, r.tpr[i]]), lineStyle: { width: k === sel ? 3.5 : 1.6, color: col[k] }, itemStyle: { color: col[k] },
+          areaStyle: k === sel ? { color: grad(alpha(col[k], 0.25), alpha(col[k], 0)) } : undefined })),
+          { type: "line", name: "Random", data: [[0, 0], [1, 1]], showSymbol: false, lineStyle: { type: "dashed", color: c.muted, width: 1 }, itemStyle: { color: c.muted } }] };
+    });
+  }
+
+  function gainsChart(A: any, sel: string) {
+    mount($("#c-gains"), () => {
+      const c = palette(), col = COL();
+      const keys = [sel, "lgbm_bureau"];
+      return { ...base({ tooltip: { trigger: "axis", valueFormatter: (v: number) => pct(v, 0) } }),
+        xAxis: axisX({ type: "category", boundaryGap: false, data: A.gains.x.map((x: number) => pct(x, 0)), name: "Riskiest applicants declined", nameLocation: "middle", nameGap: 26,
+          axisLabel: { color: c.muted, interval: 9 } }),
+        yAxis: axisY({ type: "value", max: 1, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        series: [...keys.map((k) => ({ type: "line", name: A.labels[k], data: A.gains[k], showSymbol: false, smooth: true,
+          lineStyle: { width: k === sel ? 3.5 : 1.8, color: col[k] }, itemStyle: { color: col[k] },
+          areaStyle: k === sel ? { color: grad(alpha(c.mint, 0.3), alpha(c.mint, 0)) } : undefined,
+          markPoint: k === sel ? { symbol: "circle", symbolSize: 12, itemStyle: { color: c.mint, borderColor: "#fff", borderWidth: 2 }, label: { show: false },
+            data: [{ coord: [10, A.gains[k][10]] }] } : undefined })),
+          { type: "line", name: "Random", data: A.gains.x, showSymbol: false, lineStyle: { type: "dashed", color: c.muted, width: 1 }, itemStyle: { color: c.muted } }] };
+    });
+  }
+
+  function histChart(A: any) {
+    mount($("#c-hist"), () => {
+      const c = palette(); const b = A.score_hist.bins;
+      const zone = (from: number, to: number, color: string, name: string) => [{ name, xAxis: String(from), itemStyle: { color: alpha(color, 0.07) },
+        label: { color, fontWeight: 700, position: "insideTop", fontSize: 12 } }, { xAxis: String(to) }];
+      const lo = b[0], hi = b[b.length - 1];
+      const snap = (x: number) => b.reduce((p: number, q: number) => (Math.abs(q - x) < Math.abs(p - x) ? q : p), b[0]);
+      return { ...base({ tooltip: { trigger: "axis", valueFormatter: (v: number) => num(v) } }),
+        xAxis: axisX({ type: "category", data: b.map(String), name: "GigScore score", nameLocation: "middle", nameGap: 26, axisLabel: { color: c.muted, interval: 3 } }),
+        yAxis: axisY({ type: "value", axisLabel: { color: c.muted, formatter: (x: number) => (x / 1000).toFixed(0) + "k" } }),
+        series: [
+          { type: "bar", name: "Paid first EMI", stack: "s", data: A.score_hist.repaid, barWidth: "86%", itemStyle: { color: grad(c.sky, alpha(c.sky, 0.35)), borderRadius: [0, 0, 3, 3] },
+            markArea: { silent: true, data: [zone(lo, snap(A.cuts.refer), c.rose, "Decline"), zone(snap(A.cuts.refer), snap(A.cuts.approve), c.gold, "Officer"), zone(snap(A.cuts.approve), hi, c.mint, "Approve")] } },
+          { type: "bar", name: "Missed first EMI", stack: "s", data: A.score_hist.missed, itemStyle: { color: grad(c.rose, alpha(c.rose, 0.55)), borderRadius: [5, 5, 0, 0] } }] };
+    });
+  }
+
+  function decileChart(A: any) {
+    mount($("#c-deciles"), () => {
+      const c = palette(); const d = [...A.deciles].reverse();
+      return { ...base({ tooltip: { trigger: "axis", valueFormatter: (v: number) => pct(v) } }),
+        xAxis: axisX({ type: "category", data: d.map((r: any) => `${r.score_lo}–${r.score_hi}`),
+          axisLabel: { color: c.muted, rotate: 35, fontSize: 10 } }),
+        yAxis: axisY({ type: "value", axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        series: [{ type: "bar", name: "Actual default", data: d.map((r: any) => r.default_rate), barWidth: "62%",
+            itemStyle: { borderRadius: [10, 10, 3, 3], color: grad(c.gold2, alpha(c.gold, 0.45)) } },
+          { type: "line", name: "Predicted", data: d.map((r: any) => r.mean_pd), smooth: true, symbolSize: 7, lineStyle: { color: c.sky, width: 2.5 }, itemStyle: { color: c.sky } }] };
+    });
+  }
+
+  function flowChart(A: any) {
+    mount($("#c-flow"), () => {
+      const c = palette();
+      const bandCol: Record<string, string> = { Approve: c.mint, "Credit officer": c.gold, Decline: c.rose };
+      const links: any[] = [];
+      for (const [b, o] of Object.entries(A.flow) as [string, any][]) {
+        const B = b === "refer" ? "Credit officer" : b[0].toUpperCase() + b.slice(1);
+        links.push({ source: "Applications", target: B, value: o.repaid + o.missed },
+          { source: B, target: "Paid first EMI", value: o.repaid }, { source: B, target: "Missed first EMI", value: o.missed });
+      }
+      return { ...base({ tooltip: { trigger: "item", formatter: (p: any) => p.dataType === "edge" ? `${p.data.source} → ${p.data.target}<br/><b>${num(p.data.value)}</b>` : p.name } }),
+        series: [{ type: "sankey", left: 4, right: 120, top: 10, bottom: 10, nodeWidth: 14, nodeGap: 18, emphasis: { focus: "adjacency" },
+          label: { color: c.text, fontSize: 12.5, fontWeight: 600 }, lineStyle: { color: "gradient", opacity: 0.38, curveness: 0.5 },
+          data: [{ name: "Applications", itemStyle: { color: c.sky } }, ...Object.keys(bandCol).map((k) => ({ name: k, itemStyle: { color: bandCol[k] } })),
+            { name: "Paid first EMI", itemStyle: { color: c.mint } }, { name: "Missed first EMI", itemStyle: { color: c.rose } }], links }] };
+    });
+  }
+
+  function approvalChart(A: any, sel: string) {
+    mount($("#c-approval"), () => {
+      const c = palette(), col = COL();
+      return { ...base({ tooltip: { trigger: "axis", valueFormatter: (v: number) => pct(v) } }),
+        xAxis: axisX({ type: "category", boundaryGap: false, data: A.approval.x.map((x: number) => pct(x, 0)), name: "Applicants approved (safest first)", nameLocation: "middle", nameGap: 26,
+          axisLabel: { color: c.muted, interval: 6 } }),
+        yAxis: axisY({ type: "value", min: 0.08, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        series: [...["lgbm_bureau", "scorecard_fair", "lgbm_combined", "lgbm_fair"].map((k) => ({ type: "line", name: A.labels[k], data: A.approval[k], showSymbol: false, smooth: true,
+          lineStyle: { width: k === sel ? 3.5 : 1.6, color: col[k] }, itemStyle: { color: col[k] },
+          areaStyle: k === sel ? { color: grad(alpha(col[k], 0.22), alpha(col[k], 0)) } : undefined })),
+          { type: "line", name: "Approve everyone", data: A.approval.x.map(() => A.base_rate), showSymbol: false, lineStyle: { type: "dashed", color: c.muted, width: 1 }, itemStyle: { color: c.muted } }] };
+    });
+  }
+
+  function calChart(A: any) {
+    mount($("#c-cal"), () => {
+      const c = palette();
+      const pts = (s: any) => s.pred.map((x: number, i: number) => [x, s.obs[i]]);
+      return { ...base({ tooltip: { trigger: "item", formatter: (p: any) => `${p.seriesName}<br/>predicted ${pct(p.value[0])} · actual ${pct(p.value[1])}` } }),
+        xAxis: axisX({ type: "value", min: 0, max: 0.5, name: "Predicted chance of missing", nameLocation: "middle", nameGap: 26, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        yAxis: axisY({ type: "value", min: 0, max: 0.5, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        series: [{ type: "line", name: "Perfect", data: [[0, 0], [0.5, 0.5]], showSymbol: false, lineStyle: { type: "dashed", color: c.muted, width: 1 }, itemStyle: { color: c.muted } },
+          { type: "line", name: "Aug–Sep (training months)", data: pts(A.calibration.aug_sep_oof), symbolSize: 9, smooth: true, lineStyle: { color: c.mint, width: 2.5 }, itemStyle: { color: c.mint } },
+          { type: "line", name: "October (test)", data: pts(A.calibration.october), symbolSize: 9, smooth: true, lineStyle: { color: c.rose, width: 2.5 }, itemStyle: { color: c.rose } }] };
+    });
+  }
+
+  function segChart(A: any) {
+    mount($("#c-seg"), () => {
+      const c = palette();
+      return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => v.toFixed(3) } }),
+        xAxis: axisX({ type: "category", data: A.segments.map((s: any) => s.segment), axisLabel: { color: c.text2, fontSize: 11.5, interval: 0 } }),
+        yAxis: axisY({ type: "value", min: 0.45, max: 0.7 }),
+        series: [{ type: "bar", name: "GigScore", data: A.segments.map((s: any) => s.auc), barGap: "18%", barWidth: "30%", itemStyle: { borderRadius: [8, 8, 2, 2], color: grad(c.sky, alpha(c.sky, 0.4)) },
+            label: { show: true, position: "top", color: c.text, fontWeight: 700, formatter: (p: any) => p.value.toFixed(3) } },
+          { type: "bar", name: "Bureau data only", data: A.segments.map((s: any) => s.auc_bureau), barWidth: "30%", itemStyle: { borderRadius: [8, 8, 2, 2], color: alpha(c.muted, 0.45) },
+            label: { show: true, position: "top", color: c.muted, formatter: (p: any) => p.value.toFixed(3) } }] };
+    });
+  }
+
+  function monthChart(A: any) {
+    mount($("#c-months"), () => {
+      const c = palette();
+      const name = (mth: string) => ({ "2018-08": "Aug 2018", "2018-09": "Sep 2018", "2018-10": "Oct 2018 (test)" } as any)[mth] || mth;
+      return { ...base({ tooltip: { trigger: "axis" } }),
+        xAxis: axisX({ type: "category", data: A.months.map((r: any) => name(r.month)) }),
+        yAxis: [axisY({ type: "value", axisLabel: { color: c.muted, formatter: (x: number) => (x / 1000).toFixed(0) + "k" } }),
+          axisY({ type: "value", min: 0.15, max: 0.26, splitLine: { show: false }, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } })],
+        series: [{ type: "bar", name: "Loans", data: A.months.map((r: any) => r.n), barWidth: "42%", itemStyle: { borderRadius: [10, 10, 3, 3], color: grad(c.violet, alpha(c.violet, 0.3)) },
+            tooltip: { valueFormatter: (v: number) => num(v) } },
+          { type: "line", name: "Default rate", yAxisIndex: 1, data: A.months.map((r: any) => r.default_rate), symbolSize: 10, lineStyle: { color: c.gold, width: 3 }, itemStyle: { color: c.gold },
+            label: { show: true, color: c.gold, fontWeight: 700, formatter: (p: any) => pct(p.value) }, tooltip: { valueFormatter: (v: number) => pct(v) } }] };
+    });
+  }
+
+  function shapChart(A: any) {
+    mount($("#c-shap"), () => {
+      const c = palette(); const rows = [...A.shap].reverse();
+      return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => v.toFixed(3) }, grid: { left: 16, right: 40, top: 10, bottom: 4, containLabel: true } }),
+        xAxis: axisX({ type: "value", splitLine: { show: false }, axisLabel: { show: false } }),
+        yAxis: axisY({ type: "category", data: rows.map((r: any) => nice(r.feature)), axisLabel: { color: c.text2, fontSize: 11.5 } }),
+        series: [{ type: "bar", data: rows.map((r: any) => r.value), barWidth: 12, itemStyle: { borderRadius: 7, color: hgrad(alpha(c.sky, 0.2), c.sky) },
+          label: { show: true, position: "right", color: c.muted, fontSize: 11, formatter: (p: any) => p.value.toFixed(3) } }] };
+    });
+  }
+
+  function ivChart(A: any) {
+    mount($("#c-iv"), () => {
+      const c = palette(); const rows = [...A.iv].reverse();
+      return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => v.toFixed(3) }, grid: { left: 16, right: 40, top: 10, bottom: 4, containLabel: true } }),
+        xAxis: axisX({ type: "value", splitLine: { show: false }, axisLabel: { show: false } }),
+        yAxis: axisY({ type: "category", data: rows.map((r: any) => nice(r.feature)), axisLabel: { color: c.text2, fontSize: 11.5 } }),
+        series: [{ type: "bar", barWidth: 12, data: rows.map((r: any) => ({ value: r.iv, itemStyle: { borderRadius: 7,
+            color: r.in_shipped ? hgrad(alpha(c.gold, 0.2), c.gold) : alpha(c.muted, 0.35) } })),
+          label: { show: true, position: "right", color: c.muted, fontSize: 11, formatter: (p: any) => p.value.toFixed(3) } }] };
+    });
+  }
+
+  function statesChart(A: any) {
+    mount($("#c-states"), () => {
+      const c = palette(); const rows = [...A.states].reverse();
+      const cats = rows.map((r: any) => `State ${r.state} · ${pct(r.default_rate, 0)} default`);
+      return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => pct(v) }, grid: { left: 4, right: 20, top: 34, bottom: 24, containLabel: true } }),
+        xAxis: axisX({ type: "value", min: 0.15, max: 0.95, name: "Approval rate", nameLocation: "middle", nameGap: 24, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        yAxis: axisY({ type: "category", data: cats, axisLabel: { color: c.text2, fontSize: 11 } }),
+        series: [
+          { type: "bar", name: "gap", stack: "d", silent: true, data: rows.map((r: any) => Math.min(r.approval_shipped, r.approval_all_features)), itemStyle: { color: "transparent" }, barWidth: 4, tooltip: { show: false } },
+          { type: "bar", name: "range", stack: "d", silent: true, data: rows.map((r: any) => Math.abs(r.approval_shipped - r.approval_all_features)), itemStyle: { color: alpha(c.muted, 0.35), borderRadius: 3 }, barWidth: 4, tooltip: { show: false } },
+          { type: "scatter", name: "Earlier model", data: rows.map((r: any) => r.approval_all_features), symbolSize: 13, itemStyle: { color: c.gold } },
+          { type: "scatter", name: "Production model", data: rows.map((r: any) => r.approval_shipped), symbolSize: 13, itemStyle: { color: c.sky, borderColor: "#fff", borderWidth: 1.5 },
+            markLine: { silent: true, symbol: "none", lineStyle: { color: c.text2, type: "dashed" }, label: { color: c.text2, formatter: "overall 60%" }, data: [{ xAxis: 0.6 }] } }],
+        legend: { ...base().legend, data: ["Production model", "Earlier model"] } };
+    });
+  }
+</script>

@@ -1,0 +1,86 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Icon from "../components/Icon.astro";
+const phases = [
+  ["1", "Weeks 1–2", "Historical back-test", "Twelve months of your two-wheeler originations are scored offline and compared with actual repayment.",
+    ["Rank-ordering (Gini / AUC) on your book", "Approval uplift at your current delinquency", "Recommended cut-offs for your risk appetite"]],
+  ["2", "Weeks 3–10", "Shadow assessment", "GigScore scores every new application alongside your credit officers. It does not influence any decision.",
+    ["Agreement between recommendations and officer decisions", "First-EMI outcomes of shadow-approved applicants", "Turnaround time and referral volumes"]],
+  ["3", "Week 11 onwards", "Controlled go-live", "One branch uses GigScore recommendations, with cut-offs set by your risk function and officers retaining authority.",
+    ["Monthly performance and fairness review", "Override rate and override outcomes", "Decision on wider roll-out"]],
+];
+const fields = [
+  ["Application", "Loan amount, asset cost, application date, branch", "Loan origination system"],
+  ["Applicant", "Age, employment type, KYC documents provided", "Loan origination system"],
+  ["Credit bureau", "Bureau score or reason for no score; existing loans, overdue accounts, enquiries", "Bureau report already pulled"],
+  ["Outcome", "Whether the first EMI (and subsequent EMIs) were paid", "Loan management system"],
+  ["Optional, post-disbursal", "Bank / UPI statement, with borrower consent", "Account Aggregator or upload"],
+];
+const criteria = [
+  ["portfolio", "Rank-ordering on your book", "The score separates borrowers who repay from those who do not, at least as well as in the 2018 validation."],
+  ["bolt", "Approval uplift at constant risk", "More approvals at the delinquency rate your current policy accepts — measured, not estimated."],
+  ["check", "First-EMI delinquency", "Delinquency among shadow-approved applicants is at or below your current approved book."],
+  ["clock", "Turnaround time", "Recommendations in under a second; referrals decided within the 24-hour service level."],
+  ["user", "Override rate", "How often officers depart from the recommendation, and how those loans perform."],
+  ["scale", "State-level consistency", "Approval rates stay within the agreed tolerance across states and age groups."],
+];
+---
+<Layout title="Pilot programme" active="pilot"
+  photo="rider-street" photoAlt="A man riding a motorcycle down a Mumbai street"
+  subtitle="A staged programme that validates GigScore on your own portfolio before it influences a single live decision. Typical duration: about three months."
+  next={{ title: "See the platform in operation", text: "The demonstration workspace runs the production model on twelve sample cases — from referral to decision, disbursal, early warning and collections.",
+          href: "/app", cta: "Open the demonstration workspace", alt: ["/analytics", "Review the validation"] }}>
+
+  <section class="section">
+    <div class="steps3" style="margin-top:20px">
+      {phases.map(([n, w, t, d, out]) => (
+        <div style="text-align:left;border:1px solid var(--border)">
+          <span class="num">{n}</span><div class="w" style="text-align:center">{w}</div><h3 style="text-align:center">{t}</h3>
+          <p>{d}</p>
+          <ul class="small" style="margin:12px 0 0;padding-left:18px;color:var(--text-2);line-height:1.8">{(out as string[]).map((o) => <li>{o}</li>)}</ul>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="split" style="gap:40px;align-items:start">
+      <div>
+        <h2 class="big-h">Data required for the <em>back-test</em></h2>
+        <p class="sub-h">Only fields your teams already capture. Data can remain within your environment; GigScore can be deployed on your infrastructure for the pilot.</p>
+      </div>
+      <div class="card" style="padding:0">
+        <table>
+          <tr><th style="padding-left:18px">Category</th><th>Fields</th><th>Usual source</th></tr>
+          {fields.map(([c, f, s]) => <tr><td style="padding-left:18px"><b>{c}</b></td><td class="small">{f}</td><td class="small muted">{s}</td></tr>)}
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="big-h center">How success <em>is measured</em></h2>
+    <p class="sub-h center">Agreed with your risk function before the pilot begins, and reported at the end of each phase.</p>
+    <div class="comp-cards">
+      {criteria.map(([icon, t, d]) => (
+        <div style="border:1px solid var(--border)"><span class="ti"><Icon name={icon} size={20} /></span><div><h3>{t}</h3><p>{d}</p></div></div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="split" style="gap:40px;align-items:start">
+      <div>
+        <h2 class="big-h">Governance during <em>the pilot</em></h2>
+        <p class="sub-h">The controls that apply in production apply from the first day of the pilot. See the <a href="/about">model governance documentation</a> for detail.</p>
+      </div>
+      <div class="stack" style="gap:12px">
+        <div class="plain"><b>No automated decisions</b> until phase 3, and only within cut-offs approved by your risk function.</div>
+        <div class="plain"><b>Officer authority</b> is retained throughout; every override is recorded with its reason.</div>
+        <div class="plain"><b>Complete audit trail</b> of inputs, recommendations, decisions and policy changes from the first application scored.</div>
+        <div class="plain"><b>Consent-based monitoring</b> only: statements are read solely with the borrower's explicit consent.</div>
+        <div class="plain"><b>Integration</b> through a REST API to your loan origination system, or through the GigScore workspace without integration work.</div>
+      </div>
+    </div>
+  </section>
+</Layout>

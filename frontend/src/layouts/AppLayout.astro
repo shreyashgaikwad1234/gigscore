@@ -1,0 +1,188 @@
+---
+// The workspace shell: what branch staff use every day. Sidebar, branch / user switcher, search and alerts.
+// Takes the same props as Layout so a page can move between the public site and the workspace.
+import "../styles/global.css";
+import Icon from "../components/Icon.astro";
+
+interface Props {
+  title: string; active: string; subtitle?: string; eyebrow?: string; eyebrowTone?: string; bare?: boolean;
+  photo?: string; photoAlt?: string; steps?: string[];
+}
+const { title, active, subtitle, eyebrow, bare = false, steps } = Astro.props;
+const groups = [
+  ["Work", [["inbox", "/app", "Decision queue", "inbox"], ["apply", "/apply", "New application", "apply"],
+            ["watch", "/watch", "Early-warning monitor", "watch"], ["portfolio", "/portfolio", "Decision log", "file"]]],
+  ["Reports", [["analytics", "/analytics", "Validation", "portfolio"], ["about", "/about", "Model governance", "about"]]],
+  ["Admin", [["admin", "/admin", "Policy settings", "admin"]]],
+] as const;
+---
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · GigScore workspace</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2324497d'/><rect x='21' y='21' width='9' height='9' rx='2' fill='%23c96a12'/><text x='14' y='22' font-family='Arial' font-weight='700' font-size='16' text-anchor='middle' fill='white'>G</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <script is:inline>
+      try { const t = localStorage.getItem("gigscore-ui-theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+    </script>
+  </head>
+  <body class="app-body">
+    <div class="shell">
+      <aside class="side" id="side">
+        <a class="brand" href="/app"><span class="brand-mark">G</span><span><b>GigScore</b><small>Workspace</small></span></a>
+        {groups.map(([label, items]) => (
+          <div class="side-group">
+            <div class="side-label">{label}</div>
+            {items.map(([key, href, text, icon]) => (
+              <a class="side-link" href={href} aria-current={key === active ? "page" : undefined}>
+                <Icon name={icon} size={17} /><span>{text}</span>
+                {key === "inbox" && <em class="count" id="count-inbox" hidden></em>}
+                {key === "watch" && <em class="count red" id="count-watch" hidden></em>}
+              </a>
+            ))}
+          </div>
+        ))}
+        <div class="side-foot">
+          <a class="side-link" href="/"><Icon name="globe" size={17} /><span>Public website</span></a>
+          <button class="side-link" id="theme" type="button"><Icon name="about" size={17} /><span>Light / dark</span></button>
+          <div class="tiny muted" style="padding:8px 10px 0">Demonstration workspace · sample and practice records are marked</div>
+        </div>
+      </aside>
+
+      <div class="main-col">
+        <header class="topbar">
+          <button class="icon-btn only-mobile" id="menu" aria-label="Menu"><Icon name="apply" size={17} /></button>
+          <button class="search-btn" id="search-open" type="button">
+            <Icon name="search" size={16} /><span>Search applicant, application or loan no.</span><kbd>Ctrl K</kbd>
+          </button>
+          <div class="top-right">
+            <select id="branch" class="top-select" aria-label="Branch">
+              <option value="">All branches</option>
+              <option>Pune – Hadapsar</option><option>Pune – Wakad</option><option>Mumbai – Andheri</option>
+            </select>
+            <div class="bell-wrap">
+              <button class="icon-btn" id="bell" aria-label="Alerts"><Icon name="bell" size={17} /><i class="dot" id="bell-dot" hidden></i></button>
+              <div class="pop" id="bell-pop" hidden></div>
+            </div>
+            <select id="officer" class="top-select user" aria-label="Signed-in user (demo)">
+              <option>R. Patil (CO-114)</option><option>S. Kulkarni (CO-120)</option>
+              <option>A. Shaikh (Collections)</option><option>M. Iyer (Risk head)</option>
+            </select>
+            <span id="api-status" class="pill-status">…</span>
+          </div>
+        </header>
+
+        <main class="app-page">
+          {!bare && (
+            <div class="app-head">
+              <div>
+                {eyebrow && <div class="eyebrow">{eyebrow}</div>}
+                <h1>{title}</h1>
+                {subtitle && <p class="lede">{subtitle}</p>}
+              </div>
+              <slot name="actions" />
+            </div>
+          )}
+          {!bare && steps && (
+            <details class="howto-box">
+              <summary>How to use this page</summary>
+              <ol class="howto">{steps.map((s) => <li><span set:html={s} /></li>)}</ol>
+            </details>
+          )}
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <div class="search-modal" id="search-modal" hidden>
+      <div class="search-panel">
+        <div class="search-input"><Icon name="search" size={18} /><input id="search-q" type="text" placeholder="Name, application no. (APP-…) or loan no. (TW-…)" autocomplete="off" /><kbd>Esc</kbd></div>
+        <div id="search-results"><div class="small muted" style="padding:14px 16px">Type at least 2 letters.</div></div>
+      </div>
+    </div>
+
+    <script>
+      import { api, esc } from "../lib/api";
+      import { getBranch, getOfficer, setBranch, setOfficer } from "../lib/workspace";
+      import { autoCountUp } from "../lib/motion";
+      autoCountUp();
+
+      const el = (id: string) => document.getElementById(id)!;
+      api("/health").then((h) => {
+        el("api-status").textContent = h.force_fallback ? "● Backup model" : "● Live";
+        el("api-status").className = "pill-status " + (h.force_fallback ? "warn" : "ok");
+      }).catch(() => { el("api-status").textContent = "● Offline"; el("api-status").className = "pill-status err"; });
+
+      el("theme").addEventListener("click", () => {
+        const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem("gigscore-ui-theme", next); } catch (e) { /* no storage */ }
+        window.dispatchEvent(new CustomEvent("themechange"));
+      });
+      el("menu").addEventListener("click", () => el("side").classList.toggle("open"));
+
+      // branch and (demo) user live in localStorage; pages listen for "workspace:context"
+      const branch = el("branch") as HTMLSelectElement, officer = el("officer") as HTMLSelectElement;
+      branch.value = getBranch();
+      if (getOfficer() && ![...officer.options].some((o) => o.value === getOfficer())) officer.add(new Option(getOfficer(), getOfficer()));
+      if (getOfficer()) officer.value = getOfficer(); else setOfficer(officer.value);
+      branch.addEventListener("change", () => { setBranch(branch.value); window.dispatchEvent(new CustomEvent("workspace:context")); counts(); });
+      officer.addEventListener("change", () => { setOfficer(officer.value); window.dispatchEvent(new CustomEvent("workspace:context")); });
+
+      // counts in the sidebar and the alerts menu
+      async function counts() {
+        try {
+          const [inbox, queue] = await Promise.all([api("/inbox" + (getBranch() ? "?branch=" + encodeURIComponent(getBranch()) : "")), api("/collections/queue")]);
+          const late = inbox.filter((r: any) => Date.now() - Date.parse(r.ts) > 24 * 3600e3);
+          const red = queue.filter((r: any) => r.flag === "red" && !r.followup);
+          const ci = el("count-inbox"), cw = el("count-watch");
+          ci.textContent = String(inbox.length); ci.hidden = !inbox.length;
+          cw.textContent = String(red.length); cw.hidden = !red.length;
+          el("bell-dot").hidden = !(late.length || red.length);
+          el("bell-pop").innerHTML = `<div class="pop-head">Alerts</div>` + ([
+            ...late.map((r: any) => `<a href="/app/case?id=${encodeURIComponent(r.application_id)}"><b>${esc(r.applicant_name || r.application_id)}</b> has waited over 24 hours for a decision</a>`),
+            ...red.slice(0, 5).map((r: any) => `<a href="${r.application_id ? `/app/case?id=${encodeURIComponent(r.application_id)}` : "/watch"}"><b>${esc(r.loan_id)}</b> is red and nobody has called yet</a>`),
+          ].join("") || `<div class="small muted" style="padding:10px 14px">Nothing needs attention.</div>`);
+        } catch { /* API offline: the status pill says so */ }
+      }
+      counts();
+      window.addEventListener("workspace:refresh", counts);
+      el("bell").addEventListener("click", (e) => { e.stopPropagation(); el("bell-pop").hidden = !el("bell-pop").hidden; });
+      document.addEventListener("click", () => (el("bell-pop").hidden = true));
+
+      // search (Ctrl/Cmd + K)
+      const modal = el("search-modal"), q = el("search-q") as HTMLInputElement;
+      const open = () => { modal.hidden = false; q.value = ""; q.focus(); };
+      const close = () => (modal.hidden = true);
+      el("search-open").addEventListener("click", open);
+      modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
+      document.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); open(); }
+        if (e.key === "Escape") close();
+      });
+      let t = 0, hits: any[] = [], sel = 0;
+      const draw = () => {
+        el("search-results").innerHTML = hits.length ? hits.map((h, i) => `<a class="hit ${i === sel ? "sel" : ""}" href="/app/case?id=${encodeURIComponent(h.application_id)}">
+            <span><b>${esc(h.applicant_name || "—")}</b> <span class="muted">${esc(h.application_id)}${h.disbursed ? " · " + esc(h.disbursed.note) : ""}</span>
+            <div class="tiny muted">${esc(h.branch || "")}</div></span>
+            <span class="badge ${esc(h.final ? h.final.status : h.band)}" style="text-transform:none">${h.disbursed ? "Disbursed" : h.final ? (h.final.status === "approve" ? "Approved" : "Declined") : "Waiting"}</span></a>`).join("")
+          : `<div class="small muted" style="padding:14px 16px">${q.value.trim().length < 2 ? "Type at least 2 letters." : "No matching case."}</div>`;
+      };
+      q.addEventListener("input", () => { clearTimeout(t); t = window.setTimeout(async () => { hits = q.value.trim().length < 2 ? [] : await api("/search?q=" + encodeURIComponent(q.value)); sel = 0; draw(); }, 150); });
+      q.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowDown") { sel = Math.min(sel + 1, hits.length - 1); draw(); e.preventDefault(); }
+        if (e.key === "ArrowUp") { sel = Math.max(sel - 1, 0); draw(); e.preventDefault(); }
+        if (e.key === "Enter" && hits[sel]) location.href = "/app/case?id=" + encodeURIComponent(hits[sel].application_id);
+      });
+
+      const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))), { threshold: 0.05 });
+      const watch = () => document.querySelectorAll(".reveal:not(.in)").forEach((n) => io.observe(n));
+      watch();
+      new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
+    </script>
+  </body>
+</html>

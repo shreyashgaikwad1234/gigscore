@@ -1,0 +1,508 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Icon from "../components/Icon.astro";
+const teams = [
+  ["apply", "Credit operations", "A recommendation with its three principal reasons in under a second. Referrals are routed to an officer's queue with a 24-hour service level.", "/app", "Open the decision queue"],
+  ["watch", "Collections", "Consent-based statement monitoring identifies deteriorating repayment capacity before the next EMI falls due, with a recommended intervention.", "/watch", "Open the early-warning monitor"],
+  ["portfolio", "Risk & policy", "Out-of-time validation on 98,364 loans, and a policy simulator to test cut-offs before they are applied to live decisions.", "/analytics", "Review the evidence"],
+  ["inbox", "Compliance & audit", "Every recommendation, officer decision, override and policy change is recorded with its inputs, reasons and model version.", "/portfolio", "Open the decision log"],
+];
+const products = [
+  ["rider-scooter", "Application decisioning", "Score, recommendation and principal reasons for every application, previewed as the form is completed.", "/apply", "Score an application"],
+  ["rider-traffic", "Early-warning monitoring", "Reads a borrower's bank or UPI statement, with consent, and flags falling income weeks before an EMI is due.", "/watch", "Review a loan"],
+  ["mumbai-street", "Policy simulator", "Test approval cut-offs against real outcomes — approval rate, first-EMI delinquency and state-level consistency.", "/analytics#playground", "Simulate a policy"],
+  ["rupees", "Decision letters", "Sanction and decline letters with stated reasons, generated from the record in English, Hindi or Marathi.", "/app/case?id=APP-DEMO-0994#letter", "View a sample letter"],
+];
+const challenges = [
+  ["noscore", "A large share of our applicants are new to credit."],
+  ["firstemi", "First-EMI delinquency is above our risk appetite."],
+  ["slow", "Turnaround time is slowing disbursals."],
+  ["explain", "Decline reasons are hard to communicate and document."],
+];
+const faqs = [
+  ["Does GigScore replace the credit bureau?", "No. Where a bureau score exists, GigScore uses it as one input. Its value is greatest where there is no score: it rank-orders new-to-credit applicants using information already captured at origination — loan, asset, documentation and any available credit history."],
+  ["What data is required?", "Only fields an NBFC already captures on a two-wheeler application: loan amount, asset cost, age, employment type, KYC documents provided and the bureau report where available. No device data — contacts, SMS or photos — is used."],
+  ["How are adverse decisions explained?", "Each recommendation states its three principal reasons in plain language, for example “The loan is a high share of the vehicle price”. These carry through to the decline letter. Every decline is reviewed by a credit officer before it is final."],
+  ["How accurate is the model?", "It was trained on August–September 2018 loans and validated out-of-time on 98,364 October 2018 loans it had not seen. Approved applicants paid their first EMI 82.5% of the time, against 76.5% for the full applicant base. It is a rank-ordering tool; some approved borrowers will still miss."],
+  ["How is fairness controlled?", "Age and state are never decision inputs. Variables that acted as proxies for location — area, branch and dealer — were removed, reducing the largest state deviation in approval rate to about 8.5 percentage points. State-level outcomes are monitored on every policy change."],
+  ["How would a pilot work?", "In three stages: a back-test on your historical book, a shadow period alongside your credit officers, then a controlled go-live in one branch. GigScore does not decide anything on your book until it has been validated on your own data."],
+  ["How does it integrate with our loan origination system?", "Through a REST API that returns the score, recommendation and reasons in about a second, or through the GigScore workspace for officers. Both write to the same audit trail."],
+];
+---
+<Layout title="Credit decisioning for two-wheeler lenders" active="home" bare>
+  <!-- HERO -->
+  <section class="fhero">
+    <div class="inner">
+      <div class="fhero-copy">
+        <span class="pill-orange">Credit decisioning for two-wheeler lenders</span>
+        <h1>Lend to new-to-credit riders with <em>confidence.</em></h1>
+        <p class="lede">Half of two-wheeler applicants have no bureau score. GigScore assesses them using data your teams
+          already capture at origination, gives every decision <b>a clear recommendation and its reasons</b>, and monitors
+          repayment capacity after disbursal.</p>
+        <div class="icon-row">
+          <div><span><Icon name="bolt" size={20} /></span>Sub-second<br />decisioning</div>
+          <div><span><Icon name="apply" size={20} /></span>Stated reasons<br />for every decision</div>
+          <div><span><Icon name="watch" size={20} /></span>Post-disbursal<br />early warning</div>
+          <div><span><Icon name="scale" size={20} /></span>Fair-lending<br />controls</div>
+        </div>
+        <div class="btn-row" style="margin-top:30px">
+          <a class="btn cta" href="/apply?example=1">Score a sample application <Icon name="arrow" size={17} /></a>
+          <a class="btn ghost big" href="#estimate">Estimate the impact on your book</a>
+        </div>
+      </div>
+      <div class="fhero-art">
+        <div class="fhero-photo"><img src="/photos/rider-scooter.jpg" alt="A man riding a scooter on a city street" /></div>
+        <div class="demo-wrap">
+          <div class="demo-window" id="demo" aria-label="Animated example of GigScore scoring an application">
+            <div class="dw-bar"><i></i><i></i><i></i><span>GigScore · New application</span><span class="dw-live">● Live model</span></div>
+            <div class="dw-body">
+              <div class="dw-form">
+                <div class="dw-field"><label>Applicant</label><div class="dw-input" data-type="Vikas Kamble · self-employed"></div></div>
+                <div class="dw-field"><label>Loan amount</label><div class="dw-input" data-type="₹48,000"></div></div>
+                <div class="dw-field"><label>Vehicle price</label><div class="dw-input" data-type="₹72,000"></div></div>
+                <div class="dw-field"><label>Credit bureau</label><div class="dw-input" data-type="No score — no history"></div></div>
+                <div class="dw-docs"><span data-doc>Aadhaar</span><span data-doc>PAN</span><span data-doc>Voter ID</span></div>
+              </div>
+              <div class="dw-result">
+                <div class="dw-scoring" id="dw-scoring">Awaiting application…</div>
+                <svg class="dw-gauge" width="200" height="112" viewBox="0 0 200 112" id="dw-gauge"></svg>
+                <div class="dw-score" id="dw-score">–</div>
+                <div class="dw-band" id="dw-band"></div>
+                <div id="dw-reasons"></div>
+              </div>
+            </div>
+            <div class="dw-watch">
+              <div><div class="t" id="dw-watch-t">Post-disbursal · weekly credits on the borrower's statement</div><div class="dw-bars" id="dw-bars"></div></div>
+              <div class="dw-flag" id="dw-flag"></div>
+            </div>
+          </div>
+          <div class="demo-caption">Live output of the production model on a sample application. <a href="/apply?example=1">Run it yourself →</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP: facts, not logos -->
+  <section class="trust">
+    <div class="inner">
+      <div><b>98,364</b><span>loans in the out-of-time validation</span></div>
+      <div><b>233,154</b><span>two-wheeler loans in the L&amp;T 2018 dataset</span></div>
+      <div><b>3</b><span>stated reasons on every recommendation</span></div>
+      <div><b>0</b><span>device data used — no contacts, SMS or photos</span></div>
+    </div>
+  </section>
+
+  <!-- CHALLENGE PICKER -->
+  <section class="full tint-peach reveal">
+    <div class="inner">
+      <div class="split" style="gap:44px;align-items:center">
+        <div>
+          <h2 class="big-h">Where is your two-wheeler book <em>losing value?</em></h2>
+          <p class="sub-h">Select the issue closest to your portfolio to see how GigScore addresses it — with results from the validation.</p>
+          <div class="pick" id="pick">
+            {challenges.map(([k, t], i) => (
+              <label><input type="radio" name="ch" value={k} checked={i === 0} /><span>{t}<i></i></span></label>
+            ))}
+          </div>
+        </div>
+        <div class="answer" id="answer"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section class="full reveal">
+    <div class="inner">
+      <h2 class="big-h center">One platform across the <em>loan lifecycle</em></h2>
+      <p class="sub-h center">From application to collections: four modules sharing one model, one policy and one audit trail. Each opens in the live workspace.</p>
+      <div class="pcards">
+        {products.map(([img, t, d, href, cta]) => (
+          <a class="pcard" href={href}>
+            <h3>{t}</h3><p>{d}</p>
+            <div class="thumb"><img src={`/photos/${img}.jpg`} alt="" loading="lazy" /></div>
+            <span class="btn">{cta}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- 100 APPLICANTS -->
+  <section class="band-dark reveal">
+    <div class="inner">
+      <div class="split" style="align-items:center;gap:48px">
+        <div>
+          <h2 class="big-h" style="color:#fff">Outcomes for every <em>100 applications</em></h2>
+          <p style="margin-top:14px;max-width:500px;font-size:16px">GigScore was validated on 98,364 October 2018 applications that played no part in training.
+            Each recommendation was compared with whether the borrower paid the first EMI. The result, scaled to 100 applications:</p>
+          <div class="stack" style="gap:10px;margin-top:22px" id="hundred-text"></div>
+        </div>
+        <div>
+          <div class="waffle" id="waffle" style="margin:0 auto;max-width:380px"></div>
+          <div class="legend-row" style="justify-content:center;margin-top:16px">
+            <span><i style="background:var(--mint)"></i>Approve</span><span><i style="background:var(--gold)"></i>Refer to credit officer</span>
+            <span><i style="background:var(--rose)"></i>Decline</span><span><i style="box-shadow:inset 0 0 0 2px #c4d0e3"></i>Outline = missed the first EMI</span>
+          </div>
+        </div>
+      </div>
+      <div class="stat-row" id="impact"></div>
+      <p style="margin-top:26px"><a href="/analytics" style="color:#ffb27e;font-weight:700">Review the full validation — twelve analyses →</a></p>
+    </div>
+  </section>
+
+  <!-- RISK LADDER -->
+  <section class="full reveal">
+    <div class="inner">
+      <div class="split" style="align-items:center;gap:40px">
+        <div>
+          <h2 class="big-h">Risk falls steadily <em>as the score rises</em></h2>
+          <p class="sub-h">October 2018 applicants were divided into ten equal groups by score. In the lowest-scored group about
+            <b id="lad-hi">–</b> in 10 missed the first EMI; in the highest-scored group, about <b id="lad-lo">–</b> in 10.</p>
+          <div class="plain gold"><b>Why this matters:</b> a consistent rank-order lets your risk team set the approval cut-off at its chosen level of delinquency —
+            and test it first in the <a href="/analytics#playground">policy simulator</a>.</div>
+        </div>
+        <div class="card"><div id="ladder" class="chart" style="height:340px"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOOK ESTIMATE -->
+  <section class="full tint-blue reveal" id="estimate">
+    <div class="inner">
+      <div class="split" style="gap:40px;align-items:center">
+        <div>
+          <h2 class="big-h">Estimate the impact on <em>your portfolio</em></h2>
+          <p class="sub-h">Enter your volumes. The estimate applies the approval and delinquency curves of GigScore and of the bureau score from the October 2018 validation.</p>
+          <div class="segmented" id="est-mode" style="margin-top:18px">
+            <label><input type="radio" name="em" value="grow" checked /><span>Grow approvals at constant risk</span></label>
+            <label><input type="radio" name="em" value="safer" /><span>Reduce delinquency at constant volume</span></label>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <div class="slider-row"><label for="est-apps">Applications per month</label><input type="range" id="est-apps" min="200" max="20000" step="100" value="3000" /><output id="est-apps-out"></output></div>
+            <div class="slider-row"><label for="est-ticket">Average ticket size</label><input type="range" id="est-ticket" min="30000" max="150000" step="1000" value="60000" /><output id="est-ticket-out"></output></div>
+            <div class="slider-row"><label for="est-appr">Current approval rate</label><input type="range" id="est-appr" min="0.3" max="0.8" step="0.01" value="0.6" /><output id="est-appr-out"></output></div>
+          </div>
+          <p class="tiny muted" style="margin-top:10px">Indicative only. Assumes the current policy rank-orders applicants by bureau score. A back-test on your own book, the first stage of the <a href="/pilot">pilot programme</a>, replaces this with measured figures.</p>
+        </div>
+        <div class="est-grid" id="est-out" data-nocount></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO YOU CAN LEND TO -->
+  <section class="full tint-blue reveal">
+    <div class="inner">
+      <h2 class="big-h center">Creditworthy borrowers <em>the bureau cannot see</em></h2>
+      <p class="sub-h center">Results for each segment in the October 2018 validation, at the current cut-offs.</p>
+      <div class="grid cols-3" id="people" style="margin-top:30px">
+        <div class="photo-card"><img src="/photos/rider-traffic.jpg" alt="A delivery rider in an orange jacket riding through Mumbai traffic" loading="lazy" />
+          <div class="cap"><h3>Self-employed and gig workers</h3><p>Delivery partners and other per-job earners: genuine but irregular income that rarely appears in a bureau file.</p><span class="stat" data-seg="Self-employed">–</span></div></div>
+        <div class="photo-card"><img src="/photos/woman-scooter.jpg" alt="A woman sitting on a scooter, talking on her phone" loading="lazy" style="object-position:50% 30%" />
+          <div class="cap"><h3>New-to-credit applicants</h3><p>No prior loan or card, and therefore no bureau score. GigScore rank-orders them on the rest of the application.</p><span class="stat" data-seg="No bureau score">–</span></div></div>
+        <div class="photo-card"><img src="/photos/shop-phone.jpg" alt="A shopkeeper in traditional clothes talking on the phone in his shop" loading="lazy" />
+          <div class="cap"><h3>Applicants with a bureau record</h3><p>Where a bureau score exists, GigScore combines it with application data rather than replacing it.</p><span class="stat" data-seg="Has bureau score">–</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAMS -->
+  <section class="full reveal">
+    <div class="inner">
+      <h2 class="big-h center">Built for every function in the <em>credit lifecycle</em></h2>
+      <div class="team-cards">
+        {teams.map(([icon, title, text, href, link]) => (
+          <a href={href}><span class="ti"><Icon name={icon} size={22} /></span><h3>{title}</h3><p>{text}</p><b>{link} →</b></a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPLIANCE -->
+  <section class="full tint-peach reveal">
+    <div class="inner">
+      <h2 class="big-h center">Designed for <em>regulated lending</em></h2>
+      <p class="sub-h center">Built with RBI's Digital Lending Directions and the Fair Practices Code in mind. Your compliance function should confirm alignment with internal policy.
+        <a href="/about">Read the model governance documentation →</a></p>
+      <div class="comp-cards">
+        {[
+          ["shield", "Explicit borrower consent", "Statements are processed only after the borrower consents, solely for the loan concerned. No device data is collected."],
+          ["apply", "Stated reasons", "Every recommendation carries its principal reasons in plain language, supporting the communication of adverse decisions."],
+          ["check", "Human decision authority", "GigScore recommends; the credit officer decides. Overrides require a recorded justification and are reported."],
+          ["inbox", "Complete audit trail", "Applications, recommendations, officer decisions, collections actions and policy changes are logged with inputs and model version."],
+          ["scale", "Fair-lending controls", "Age and state are excluded as inputs; location proxies have been removed; state-level outcomes are monitored."],
+          ["bolt", "Lender-controlled policy", "Cut-offs, monthly recalibration and a fallback scorecard are managed by your risk function, not the vendor."],
+        ].map(([icon, t, d]) => (
+          <div><span class="ti"><Icon name={icon} size={20} /></span><div><h3>{t}</h3><p>{d}</p></div></div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- FAIRNESS -->
+  <section class="full reveal">
+    <div class="inner">
+      <div class="split" style="align-items:center;gap:40px">
+        <div>
+          <h2 class="big-h">Consistent approval rates <em>across states</em></h2>
+          <p class="sub-h">An earlier model relied on area, branch and dealer variables, which acted as proxies for the applicant's state and
+            produced materially different approval rates for similar borrowers. Those variables were removed from the production model.</p>
+          <div class="plain mint">Compare the two models. Each bar is one state; <b style="color:var(--rose)">red bars</b> deviate from the average approval rate by more than 5 percentage points.</div>
+        </div>
+        <div class="card">
+          <div class="segmented" id="fair-toggle" style="margin-bottom:10px">
+            <label><input type="radio" name="f" value="shipped" checked /><span>Production model</span></label>
+            <label><input type="radio" name="f" value="all" /><span>Earlier model (with location proxies)</span></label>
+          </div>
+          <div id="fair-chart" class="chart tall"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PILOT -->
+  <section class="full tint-blue reveal" id="pilot">
+    <div class="inner">
+      <h2 class="big-h center">Validate on <em>your own portfolio</em> first</h2>
+      <p class="sub-h center">A staged programme in which GigScore makes no live decision until it has been validated on your data.</p>
+      <div class="steps3">
+        <div><span class="num">1</span><div class="w">Weeks 1–2</div><h3>Historical back-test</h3>
+          <p>Twelve months of your two-wheeler originations are scored offline and compared with actual repayment. No system changes are required.</p></div>
+        <div><span class="num">2</span><div class="w">Weeks 3–10</div><h3>Shadow assessment</h3>
+          <p>GigScore scores new applications alongside your credit officers without influencing decisions; recommendations are compared with outcomes.</p></div>
+        <div><span class="num">3</span><div class="w">Week 11 onwards</div><h3>Controlled go-live</h3>
+          <p>A single branch goes live with cut-offs set by your risk function. Officers retain decision authority; results are reviewed monthly.</p></div>
+      </div>
+      <p class="center" style="text-align:center;margin-top:30px"><a class="btn ghost big" href="/pilot">See the full pilot plan, data requirements and success criteria →</a></p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="full reveal">
+    <div class="inner">
+      <div class="split" style="gap:40px">
+        <div><h2 class="big-h">Frequently asked <em>questions</em></h2>
+          <p class="sub-h">Every figure on this page is traceable to the <a href="/analytics">validation results</a> and the <a href="/about">model governance documentation</a>.</p></div>
+        <div class="faq">
+          {faqs.map(([q, a], i) => <details open={i === 0}><summary>{q}</summary><p>{a}</p></details>)}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAGLINE BAND -->
+  <section class="tagline">
+    <div class="inner">
+      <div>
+        <div class="hk">No bureau score should not mean no assessment.</div>
+        <div class="hl">See the workspace <em>in operation.</em></div>
+        <p>The demonstration workspace holds twelve sample cases across three branches — referrals awaiting decision, approvals under early warning and a declined application with its letter.</p>
+        <div class="btn-row" style="margin-top:22px">
+          <a class="btn cta" href="/app">Open the demonstration workspace <Icon name="arrow" size={17} /></a>
+          <a class="btn ghost big" href="/pilot">Plan a pilot</a>
+        </div>
+      </div>
+      <div class="tag-photo"><img src="/photos/woman-scooter.jpg" alt="A woman on a scooter" loading="lazy" /></div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { $, $$, api, esc, getAnalytics, getModel, num, pct, BAND_COPY } from "../lib/api";
+  import { alpha, axisX, axisY, base, grad, hgrad, mount, palette } from "../lib/charts";
+
+  // ---------- hero: the real model, animated ----------
+  // ?still=1 renders the finished state at once (used for documentation screenshots)
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches || new URLSearchParams(location.search).has("still");
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, reduce ? 0 : ms));
+  const SAMPLE = { disbursed_amount: 48000, asset_cost: 72000, age: 29, employment_type: "Self employed",
+    docs: { aadhar: 1, pan: 1, voterid: 1 }, bureau_score: null, bureau_status: "no_history", synthetic: true };
+
+  function gauge(cuts: any) {
+    const ang = (s: number) => Math.PI * (1 - (s - 300) / 600), P = (s: number, r: number) => [100 + r * Math.cos(ang(s)), 100 - r * Math.sin(ang(s))];
+    const arc = (a: number, b: number, col: string) => { const [x1, y1] = P(a, 82), [x2, y2] = P(b, 82);
+      return `<path d="M${x1} ${y1} A82 82 0 0 1 ${x2} ${y2}" stroke="${col}" stroke-width="14" fill="none" />`; };
+    $("#dw-gauge").innerHTML = arc(300, cuts.refer, "#e3aaa3") + arc(cuts.refer, cuts.approve, "#f2c879") + arc(cuts.approve, 900, "#9fd3b8") +
+      `<g class="needle" id="dw-needle" style="transform:rotate(-90deg)"><line x1="100" y1="100" x2="100" y2="30" stroke="#0c1726" stroke-width="3.5" stroke-linecap="round"/></g>
+       <circle cx="100" cy="100" r="7" fill="#0c1726"/><text x="14" y="111" font-size="10" fill="#66717f">300</text><text x="170" y="111" font-size="10" fill="#66717f">900</text>`;
+  }
+
+  async function type(el: HTMLElement, text: string) {
+    el.classList.add("typing");
+    for (let i = 1; i <= text.length; i++) { el.textContent = text.slice(0, i); await sleep(38); }
+    el.classList.remove("typing");
+  }
+
+  async function heroLoop() {
+    let r: any, w: any, m: any;
+    try { [r, w, m] = await Promise.all([api("/score/preview", { method: "POST", body: JSON.stringify(SAMPLE) }), api("/samples/slipping/check"), getModel()]); }
+    catch { return; } // API offline: the window simply stays as a static form
+    const cuts = m.config.bands[r.model_used];
+    const v = w.weekly_inflow, early = v.slice(0, v.length - 4), late = v.slice(-4);
+    const drop = Math.round((1 - late.reduce((a: number, b: number) => a + b, 0) / 4 / (early.reduce((a: number, b: number) => a + b, 0) / early.length)) * 100);
+    const max = Math.max(...v);
+    while (true) {
+      gauge(cuts);
+      $$<HTMLElement>(".dw-input").forEach((e) => (e.textContent = ""));
+      $$<HTMLElement>("[data-doc]").forEach((e) => e.classList.remove("on"));
+      $("#dw-score").textContent = "–"; $("#dw-band").className = "dw-band"; $("#dw-band").innerHTML = ""; $("#dw-reasons").innerHTML = "";
+      $("#dw-scoring").style.opacity = "1"; $("#dw-scoring").textContent = "Awaiting application…";
+      $("#dw-bars").innerHTML = v.map(() => "<i></i>").join(""); $("#dw-flag").className = "dw-flag"; $("#dw-flag").innerHTML = "";
+      await sleep(500);
+      for (const el of $$<HTMLElement>(".dw-input")) { await type(el, el.dataset.type!); await sleep(150); }
+      for (const el of $$<HTMLElement>("[data-doc]")) { el.classList.add("on"); await sleep(180); }
+      $("#dw-scoring").textContent = "Assessing…"; await sleep(650);
+      $("#dw-scoring").style.opacity = "0";
+      ($("#dw-needle") as unknown as SVGGElement).style.transform = `rotate(${-90 + 180 * (r.score - 300) / 600}deg)`;
+      const t0 = performance.now();
+      await new Promise<void>((done) => { const f = (t: number) => { const k = Math.min(1, Math.max(0, (t - t0) / 1200)); $("#dw-score").textContent = String(Math.round(300 + (r.score - 300) * (1 - (1 - k) ** 3))); k < 1 ? requestAnimationFrame(f) : done(); }; reduce ? (($("#dw-score").textContent = String(r.score)), done()) : requestAnimationFrame(f); });
+      $("#dw-band").innerHTML = `<span class="badge ${r.band}" style="text-transform:none;font-size:13px">${BAND_COPY[r.band]}</span>`; $("#dw-band").classList.add("on");
+      const up = r.band !== "approve";
+      for (const reason of r.reasons) {
+        const d = document.createElement("div"); d.className = "dw-reason" + (up ? " up" : ""); d.textContent = (up ? "↑ " : "↓ ") + reason;
+        $("#dw-reasons").appendChild(d); await sleep(60); d.classList.add("on"); await sleep(380);
+      }
+      await sleep(1400);
+      $("#dw-watch-t").textContent = "Three months after disbursal · weekly credits on the statement";
+      const bars = $$<HTMLElement>("#dw-bars i");
+      for (let i = 0; i < bars.length; i++) { bars[i].style.height = `${Math.max(6, (v[i] / max) * 100)}%`; if (i >= v.length - 4) bars[i].classList.add("hot"); await sleep(110); }
+      $("#dw-flag").innerHTML = `<span class="badge ${w.flag}" style="text-transform:none">${w.flag === "red" ? "At risk" : "Early warning"}</span><div style="font-size:11.5px;margin-top:6px;color:#2b3747"><b>Income down ${drop}%</b><br />contact before the next EMI</div>`;
+      $("#dw-flag").classList.add("on");
+      if (reduce) return;
+      await sleep(5200);
+    }
+  }
+  heroLoop();
+
+  // ---------- data sections ----------
+  Promise.all([getModel(), getAnalytics()]).then(([m, A]) => {
+    const F = A.flow, seg = Object.fromEntries(A.segments.map((s: any) => [s.segment, s]));
+    const total = (o: any) => o.repaid + o.missed;
+    const n = A.n_test;
+    const noScore = seg["No bureau score"];
+    const gi = A.gains.x.findIndex((x: number) => Math.abs(x - 0.2) < 1e-9);
+    const caught = pct(A.gains[A.model][gi], 0);
+
+    // challenge picker
+    const ANS: Record<string, any> = {
+      noscore: { img: "woman-scooter", title: "A reliable assessment where the bureau has none",
+        text: `${pct(noScore.n / n, 0)} of applicants in the validation had no bureau score. For this segment the bureau score ranks risk at ${noScore.auc_bureau.toFixed(2)} — no better than chance (0.50). GigScore ranks it at ${noScore.auc.toFixed(2)}, approves ${pct(noScore.approval, 0)} of these applicants, and ${pct(1 - noScore.approved_default, 0)} of those approved paid their first EMI.`,
+        href: "/analytics", cta: "Review the validation" },
+      firstemi: { img: "man-phone-steps", title: "Lower delinquency at origination and after disbursal",
+        text: `Declining the lowest-scored 20% of applicants avoids ${caught} of all first-EMI misses. After disbursal, the early-warning monitor reads the borrower's statement, with consent, and flags declining income before the next EMI date.`,
+        href: "/watch", cta: "Open the early-warning monitor" },
+      slow: { img: "shop-phone", title: "Sub-second recommendations, with officer oversight",
+        text: "Each application receives a score, a recommendation and its principal reasons in about a second. Referrals are routed to a credit officer's queue with a 24-hour service level, and breaches are surfaced automatically.",
+        href: "/app", cta: "Open the decision queue" },
+      explain: { img: "shopkeeper-blue", title: "Documented reasons for every adverse decision",
+        text: "Every recommendation states the three factors that most influenced it, for example “The loan is a high share of the vehicle price”. The case record generates the decline letter in English, Hindi or Marathi.",
+        href: "/app/case?id=APP-DEMO-0994#letter", cta: "View a sample decline letter" },
+    };
+    const showAnswer = () => {
+      const a = ANS[($<HTMLInputElement>("#pick input:checked")).value];
+      $("#answer").innerHTML = `<div class="ans-photo"><img src="/photos/${a.img}.jpg" alt="" /></div>
+        <div class="ans-body"><h3>${a.title}</h3><p>${a.text}</p><a class="btn cta" href="${a.href}">${a.cta} →</a></div>`;
+    };
+    $$<HTMLInputElement>("#pick input").forEach((i) => i.addEventListener("change", showAnswer));
+    showAnswer();
+
+    // 100 applicants
+    const per = (o: any) => Math.round((total(o) / n) * 100);
+    const bands = [["a", "approve"], ["r", "refer"], ["d", "decline"]] as const;
+    const counts = bands.map(([, b]) => per(F[b]));
+    counts[0] += 100 - counts.reduce((s, x) => s + x, 0);
+    const cells: string[] = [];
+    const missOf = (b: string, i: number) => Math.round(counts[i] * (F[b].missed / total(F[b])));
+    bands.forEach(([cls, b], i) => { const miss = missOf(b, i);
+      for (let k = 0; k < counts[i]; k++) cells.push(`<i class="${cls}${k >= counts[i] - miss ? " miss" : ""}" title="${b}"></i>`); });
+    $("#waffle").innerHTML = cells.join("");
+    $("#hundred-text").innerHTML = [
+      ["mint", `<b>${counts[0]} approved</b> — ${counts[0] - missOf("approve", 0)} paid the first EMI on time; ${missOf("approve", 0)} did not.`],
+      ["gold", `<b>${counts[1]} referred to a credit officer</b> — the borderline cases; ${missOf("refer", 1)} missed the first EMI.`],
+      ["rose", `<b>${counts[2]} declined</b> — the highest-risk group; ${missOf("decline", 2)} missed the first EMI.`],
+    ].map(([tone, t]) => `<div class="plain ${tone}" style="margin:0">${t}</div>`).join("");
+    const e60 = m.extra_approvals.find((r: any) => Math.abs(r.bureau_only_approval - 0.6) < 1e-6) || m.extra_approvals[0];
+    $("#impact").innerHTML = [
+      ["Additional approvals at equal risk", "+" + num(e60.extra), `of ${num(n)} applications, at the delinquency rate of a bureau-only policy`],
+      ["First-EMI misses in the lowest 20%", caught, "of all first-EMI misses fall in the lowest-scored fifth of applicants"],
+      ["Approved borrowers who paid", pct(F.approve.repaid / total(F.approve)), `paid the first EMI, against ${pct(1 - A.base_rate)} across all applicants`],
+    ].map(([l, v, s]) => `<div><div class="l">${l}</div><div class="v" data-count>${v}</div><p>${s}</p></div>`).join("");
+
+    // estimate for the visitor's own book
+    const X = A.approval.x, GS = A.approval[A.model], BU = A.approval.lgbm_bureau;
+    const yAt = (ys: number[], x: number) => { for (let i = 1; i < X.length; i++) if (x <= X[i]) return ys[i - 1] + (ys[i] - ys[i - 1]) * (x - X[i - 1]) / (X[i] - X[i - 1]); return ys[ys.length - 1]; };
+    const xAt = (ys: number[], y: number) => { for (let i = 1; i < X.length; i++) if (ys[i] >= y) return X[i - 1] + (X[i] - X[i - 1]) * (y - ys[i - 1]) / ((ys[i] - ys[i - 1]) || 1); return 1; };
+    const money = (v: number) => v >= 1e7 ? `₹${(v / 1e7).toFixed(1)} Cr` : `₹${(v / 1e5).toFixed(1)} lakh`;
+    const st = (l: string, v: string, s: string, hero = false) => `<div class="est ${hero ? "hero" : ""}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    const estimate = () => {
+      const apps = Number(($("#est-apps") as HTMLInputElement).value), tick = Number(($("#est-ticket") as HTMLInputElement).value);
+      const appr = Number(($("#est-appr") as HTMLInputElement).value);
+      $("#est-apps-out").textContent = num(apps); $("#est-ticket-out").textContent = "₹" + num(tick); $("#est-appr-out").textContent = pct(appr, 0);
+      const buBad = yAt(BU, appr);
+      if (($<HTMLInputElement>("#est-mode input:checked")).value === "grow") {
+        const gsAppr = Math.min(1, xAt(GS, buBad)), extra = Math.max(0, apps * (gsAppr - appr));
+        $("#est-out").innerHTML = [
+          st("Additional loans per month", "+" + num(Math.round(extra)), `approval rate ${pct(appr, 0)} → ${pct(gsAppr, 0)}`, true),
+          st("Additional disbursal per month", money(extra * tick), `${money(extra * tick * 12)} per year`, true),
+          st("First-EMI delinquency", pct(buBad), "among approved loans — held constant"),
+          st("New-to-credit share", pct(noScore.n / n, 0), "of applicants; the segment that gains most"),
+        ].join("");
+      } else {
+        const gsBad = yAt(GS, appr), avoided = Math.max(0, apps * appr * (buBad - gsBad));
+        $("#est-out").innerHTML = [
+          st("First-EMI misses avoided", num(Math.round(avoided)) + " / month", `${num(Math.round(avoided * 12))} per year`, true),
+          st("Exposure protected", money(avoided * tick), "per month, at first EMI", true),
+          st("First-EMI delinquency", `${pct(buBad)} → ${pct(gsBad)}`, "bureau-only policy → GigScore"),
+          st("Approval volume", "Unchanged", `${num(Math.round(apps * appr))} loans per month`),
+        ].join("");
+      }
+    };
+    $$<HTMLInputElement>("#estimate input").forEach((i) => i.addEventListener("input", estimate));
+    estimate();
+
+    // risk ladder, annotated
+    const d = [...A.deciles].reverse(); // safest first
+    $("#lad-hi").textContent = String(Math.round(A.deciles[0].default_rate * 10));
+    $("#lad-lo").textContent = String(Math.round(A.deciles[9].default_rate * 10) || 1);
+    mount($("#ladder"), () => {
+      const c = palette();
+      return { ...base({ tooltip: { trigger: "axis", valueFormatter: (v: number) => pct(v) + " missed first EMI" }, grid: { left: 8, right: 14, top: 40, bottom: 34, containLabel: true } }),
+        legend: { show: false },
+        xAxis: axisX({ type: "category", data: d.map((r: any) => `${r.score_lo}–${r.score_hi}`), name: "score group, highest on the left", nameLocation: "middle", nameGap: 36,
+          axisLabel: { color: c.muted, fontSize: 10, rotate: 30 } }),
+        yAxis: axisY({ type: "value", axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+        series: [{ type: "bar", name: "Missed first EMI", barWidth: "58%", data: d.map((r: any, i: number) => ({ value: r.default_rate,
+          itemStyle: { borderRadius: [6, 6, 0, 0], color: i < 7 ? alpha(c.sky, 0.25 + i * 0.05) : c.gold } })),
+          label: { show: true, position: "top", color: c.text2, fontSize: 11, fontWeight: 600, formatter: (p: any) => pct(p.value, 0) },
+          markPoint: { symbol: "pin", symbolSize: 0, label: { show: true, color: c.text, fontSize: 12, fontWeight: 700, backgroundColor: c.surface, borderColor: c.border, borderWidth: 1, padding: [5, 8], borderRadius: 6 },
+            data: [{ coord: [0, d[0].default_rate], value: `safest: ${pct(d[0].default_rate, 0)}`, label: { offset: [34, -26] } },
+                   { coord: [9, d[9].default_rate], value: `riskiest: ${pct(d[9].default_rate, 0)}`, label: { offset: [-30, -26] } }] } }] };
+    });
+
+    $$<HTMLElement>("[data-seg]").forEach((el) => {
+      const s = seg[el.dataset.seg!];
+      el.textContent = `${num(s.n)} applicants · ${pct(s.approval, 0)} approved · ${pct(1 - s.approved_default, 0)} of those paid`;
+    });
+
+    const fair = () => {
+      const which = ($<HTMLInputElement>("#fair-toggle input:checked")).value;
+      mount($("#fair-chart"), () => {
+        const c = palette();
+        const key = which === "shipped" ? "approval_shipped" : "approval_all_features";
+        const overall = which === "shipped" ? A.overall_approval.shipped : A.overall_approval.all_features;
+        const gap = Math.max(...A.states.map((r: any) => Math.abs(r[key] - overall))); // same measure as the FAQ's 8.5 points
+        return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (x: number) => pct(x) + " approved" },
+            grid: { left: 4, right: 18, top: 34, bottom: 4, containLabel: true } }),
+          legend: { show: false },
+          title: { text: `Furthest state from the average: ${(gap * 100).toFixed(1)} points`, left: 0, top: 0, textStyle: { fontSize: 13, fontWeight: 700, color: which === "shipped" ? c.mint : c.rose, fontFamily: "Public Sans" } },
+          xAxis: axisX({ type: "value", min: 0.2, max: 0.9, axisLabel: { color: c.muted, formatter: (x: number) => pct(x, 0) } }),
+          yAxis: axisY({ type: "category", data: A.states.map((r: any) => "State " + r.state), axisLabel: { color: c.muted, fontSize: 10.5 } }),
+          series: [{ type: "bar", name: "Approval rate", barWidth: 9, data: A.states.map((r: any) => ({ value: r[key],
+              itemStyle: { borderRadius: 6, color: Math.abs(r[key] - overall) > 0.05 ? c.rose : alpha(c.sky, 0.55) } })),
+            markLine: { silent: true, symbol: "none", lineStyle: { color: c.text2, type: "dashed" },
+              label: { color: c.text2, formatter: `average ${pct(overall, 0)}` }, data: [{ xAxis: overall }] } }] };
+      });
+    };
+    $$<HTMLInputElement>("#fair-toggle input").forEach((i) => i.addEventListener("change", fair));
+    fair();
+  }).catch((e) => { $("#impact").innerHTML = `<div class="error-box">${esc(e.message)}</div>`; });
+</script>

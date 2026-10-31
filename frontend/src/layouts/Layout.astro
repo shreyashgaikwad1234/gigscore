@@ -1,0 +1,155 @@
+---
+import "../styles/global.css";
+import Icon from "../components/Icon.astro";
+
+interface Props {
+  title: string; active: string; subtitle?: string; eyebrow?: string; eyebrowTone?: string; bare?: boolean;
+  photo?: string; photoAlt?: string; steps?: string[];
+  next?: { title: string; text: string; href: string; cta: string; alt?: [string, string] };
+}
+const { title, active, subtitle, eyebrow, eyebrowTone = "", bare = false, photo, photoAlt = "", steps, next } = Astro.props;
+// The public site; the day-to-day screens live in the workspace (/app, layouts/AppLayout.astro).
+const nav = [
+  { href: "/", key: "home", label: "Overview" },
+  { href: "/analytics", key: "analytics", label: "Validation" },
+  { href: "/about", key: "about", label: "Governance" },
+  { href: "/pilot", key: "pilot", label: "Pilot programme" },
+];
+// Real photos from Unsplash (free licence); credited in the footer.
+const credits = [
+  ["Avinash Narnaware", "90ml_water"], ["Zoshua Colah", "zoshuacolah"], ["Ather Energy", "atherenergy"], ["Vidit Goswami", "viditgoswami"],
+  ["atelierbyvineeth", "atelierbyvineeth"], ["rupixen", "rupixen"], ["Saman Me Kala", "visuallyengaged"], ["Ramneek Singh", "singhramneek54"],
+];
+---
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · GigScore</title>
+    <meta name="description" content="Alternative-data credit decisions and early warning for people the credit bureau can't see." />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2324497d'/><rect x='21' y='21' width='9' height='9' rx='2' fill='%23c96a12'/><text x='14' y='22' font-family='Arial' font-weight='700' font-size='16' text-anchor='middle' fill='white'>G</text></svg>" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&family=Archivo:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <script is:inline>
+      try {
+        const t = localStorage.getItem("gigscore-ui-theme");
+        if (t) document.documentElement.dataset.theme = t; // light is the default look; the toggle remembers a choice
+      } catch (e) {}
+    </script>
+  </head>
+  <body class="site">
+    <div class="nav-wrap">
+      <header class="nav">
+        <a class="brand" href="/">
+          <span class="brand-mark">G</span>
+          <span><b>GigScore</b><small>Credit decisions for two-wheeler loans</small></span>
+        </a>
+        <nav class="nav-links">
+          {nav.map((n) => <a href={n.href} aria-current={n.key === active ? "page" : undefined}>{n.label}</a>)}
+        </nav>
+        <div class="nav-right">
+          <span id="api-status" class="pill-status">Connecting…</span>
+          <button class="icon-btn" id="theme" title="Switch light / dark" aria-label="Switch light or dark theme">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          </button>
+          <a class="btn sm" href="/app">Open workspace <Icon name="arrow" size={15} /></a>
+        </div>
+      </header>
+    </div>
+
+    <main class="page">
+      {!bare && (
+        <div class={`page-head reveal${photo ? " has-photo" : ""}`}>
+          <div>
+            {eyebrow && <span class={`eyebrow ${eyebrowTone}`}><span class="dot"></span>{eyebrow}</span>}
+            <h1>{title}</h1>
+            {subtitle && <p class="lede">{subtitle}</p>}
+            {steps && (
+              <ol class="howto">
+                <li class="howto-title">How to use this page</li>
+                {steps.map((s) => <li><span set:html={s} /></li>)}
+              </ol>
+            )}
+            <slot name="actions" />
+          </div>
+          {photo && <figure class="photo-3d" data-tilt><img src={`/photos/${photo}.jpg`} alt={photoAlt} loading="eager" /></figure>}
+        </div>
+      )}
+      <slot />
+      {next && (
+        <section class="next-step">
+          <div>
+            <h2>{next.title}</h2>
+            <p>{next.text}</p>
+          </div>
+          <div class="btn-row" style="margin:0">
+            <a class="btn cta" href={next.href}>{next.cta} <Icon name="arrow" size={16} /></a>
+            {next.alt && <a class="btn ghost big" href={next.alt[0]}>{next.alt[1]}</a>}
+          </div>
+        </section>
+      )}
+    </main>
+    <footer class="site">
+      <nav class="foot-nav">
+        <a href="/">Overview</a><a href="/analytics">Validation</a><a href="/about">Governance</a><a href="/pilot">Pilot programme</a>
+        <a href="/app">Demonstration workspace</a><a href="/apply?example=1">Score a sample application</a>
+      </nav>
+      <div>
+        <b>GigScore</b> — credit decisioning for two-wheeler lending. Developed and validated on 233,154 L&amp;T two-wheeler loans (2018).
+        Recommendations support, and do not replace, the credit officer's decision. Bank-statement examples in the demonstration are synthetic.
+      </div>
+      <div class="credits">Photos from Unsplash by {credits.map(([n, u], i) => (
+        <>{i ? ", " : ""}<a href={`https://unsplash.com/@${u}`} target="_blank" rel="noopener">{n}</a></>
+      ))}.</div>
+    </footer>
+
+    <script>
+      import { api } from "../lib/api";
+      import { autoCountUp } from "../lib/motion";
+      autoCountUp();
+      const el = document.getElementById("api-status")!;
+      api("/health")
+        .then((h) => {
+          el.textContent = h.force_fallback ? "● Fallback active" : "● Live";
+          el.title = h.force_fallback ? h.fallback_model : h.model;
+          el.className = "pill-status " + (h.force_fallback ? "warn" : "ok");
+        })
+        .catch(() => { el.textContent = "● API offline"; el.className = "pill-status err"; });
+
+      document.getElementById("theme")!.addEventListener("click", () => {
+        const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem("gigscore-ui-theme", next); } catch (e) { /* storage unavailable */ }
+        window.dispatchEvent(new CustomEvent("themechange"));
+      });
+
+      const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && (e.target.classList.add("in"), io.unobserve(e.target))),
+        { threshold: 0.08 });
+      const watch = () => document.querySelectorAll(".reveal:not(.in)").forEach((n) => io.observe(n));
+      watch();
+      new MutationObserver(watch).observe(document.body, { childList: true, subtree: true });
+
+      // 3D tilt: [data-tilt] elements lean toward the pointer, with a soft glare (mouse only, not with reduced motion)
+      if (matchMedia("(hover: hover) and (pointer: fine)").matches && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        document.addEventListener("pointermove", (e) => {
+          const el = (e.target as Element).closest?.("[data-tilt]") as HTMLElement | null;
+          if (!el) return;
+          const r = el.getBoundingClientRect();
+          const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+          const k = Number(el.dataset.tilt || 4) * 0.5; // a slight lean, not a showpiece
+          el.style.setProperty("--ry", `${(x - 0.5) * k * 2}deg`);
+          el.style.setProperty("--rx", `${(0.5 - y) * k * 2}deg`);
+          el.style.setProperty("--gx", `${x * 100}%`);
+          el.style.setProperty("--gy", `${y * 100}%`);
+          el.classList.add("tilting");
+        });
+        document.addEventListener("pointerout", (e) => {
+          const el = (e.target as Element).closest?.("[data-tilt]") as HTMLElement | null;
+          if (el && !el.contains(e.relatedTarget as Node)) { el.classList.remove("tilting"); el.style.removeProperty("--rx"); el.style.removeProperty("--ry"); }
+        });
+      }
+    </script>
+  </body>
+</html>

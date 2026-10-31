@@ -1,0 +1,292 @@
+---
+import Layout from "../layouts/AppLayout.astro";
+import Icon from "../components/Icon.astro";
+---
+<Layout title="Early-warning monitor" active="watch"
+  subtitle="Assesses a disbursed loan from the borrower's bank or UPI statement, with consent. Six indicators — including income trend and balance ahead of the EMI date — determine a status and a recommended intervention before an EMI is missed."
+  steps={["Select a synthetic sample, or upload a statement exported from the bank once the borrower has consented.",
+          "Status: <b style='color:var(--green)'>green</b> — on track; <b style='color:var(--amber)'>amber</b> — monitor; <b style='color:var(--red)'>red</b> — contact the borrower.",
+          "Recorded checks appear in the collections call list below and on the borrower's case record."]}>
+  <div class="card" id="consent-card" style="display:flex;gap:16px;align-items:flex-start">
+    <div class="tile mint" style="flex:none"><Icon name="shield" size={20} /></div>
+    <div style="flex:1">
+      <h2>Borrower consent</h2>
+      <p class="small muted" style="margin:6px 0 12px">The borrower agrees to share the last 8–12 weeks of bank / UPI statement for monitoring this loan.
+        Only the statement is used — no contacts, call logs, photos or device data — and consent can be withdrawn at any time.</p>
+      <label class="toggle"><input type="checkbox" id="consent" /> The borrower has given this consent</label>
+    </div>
+  </div>
+
+  <div class="split" style="margin-top:16px">
+    <div class="card" id="source-card">
+      <div class="card-head"><div><h2>Borrower's statement</h2><p>Choose a sample borrower or upload a statement. (Connecting directly to the bank through an Account Aggregator is a later step.)</p></div></div>
+      <div class="grid cols-3" id="samples">
+        {[["steady", "Steady earner", "Regular payouts, bills on time"],
+          ["slipping", "Slipping", "Payouts falling, one empty week"],
+          ["stressed", "Under stress", "Income down, bills bouncing"]].map(([k, t, d]) => (
+          <button type="button" class="card sample" data-profile={k}
+            style="text-align:left;cursor:pointer;font:inherit;color:inherit;margin:0">
+            <span class="badge neutral plain tiny">SYNTHETIC</span>
+            <h3 style="margin-top:8px">{t}</h3><p class="tiny muted" style="margin-top:4px">{d}</p>
+          </button>
+        ))}
+      </div>
+      <div class="upload" id="upload">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <Icon name="upload" />
+          <div style="flex:1;min-width:200px"><b>Upload the borrower's bank statement (CSV)</b>
+            <div class="tiny muted">Most bank exports work as they are — Date, Narration, Withdrawal, Deposit, Closing balance. Drag the file here or choose it; it is checked straight away.</div></div>
+          <label class="btn ghost sm" for="csv" style="cursor:pointer">Choose file</label>
+          <input type="file" id="csv" accept=".csv,text/csv" style="display:none" />
+        </div>
+        <div class="tiny muted" style="margin-top:10px">No statement to hand? Download a sample bank export (made-up data) and upload it:
+          <a href="#" data-sample="steady">steady earner</a> · <a href="#" data-sample="slipping">slipping</a> · <a href="#" data-sample="stressed">under stress</a></div>
+      </div>
+      <div id="upload-msg" hidden></div>
+      <div id="upload-preview" hidden></div>
+      <div class="fields" style="margin-top:16px">
+        <div class="field"><label>Loan account no.</label><input id="loan_id" type="text" placeholder="e.g. TW-PUN-004512" /></div>
+        <div class="field"><label>Monthly EMI</label><div class="prefix"><span>₹</span><input id="emi" type="number" min="1" value="3300" /></div></div>
+        <div class="field"><label>EMI due day</label><input id="due_day" type="number" min="1" max="31" value="5" /></div>
+        <div class="field"><label>Other EMIs / month</label><div class="prefix"><span>₹</span><input id="other_emis" type="number" min="0" value="0" /></div></div>
+      </div>
+      <p id="stmt-info" class="small muted" style="margin-top:12px">No statement loaded.</p>
+      <div class="btn-row"><button class="btn" id="run" disabled><Icon name="watch" size={16} /> Check this loan</button>
+        <span id="run-hint" class="tiny muted">Tick the consent box to run a logged check.</span></div>
+      <div id="error" class="error-box" hidden></div>
+    </div>
+
+    <div class="stack">
+      <div class="card" id="result">
+        <div class="empty"><Icon name="watch" /><div><b>Loading a sample borrower…</b></div>
+          <div class="small">Pick a sample or upload a statement on the left.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div><h2>Weekly credits</h2><p>Total received per week, oldest first; the last four weeks are shaded.</p></div></div>
+        <div id="inflow" class="chart short"></div>
+        <div class="plain mint">A sustained fall in the last four weeks relative to earlier weeks is the strongest early indicator that an EMI may be missed.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card section" id="queue-card" style="margin-top:20px">
+    <div class="card-head"><div><h2>Collections call list</h2>
+      <p>Loans whose latest check is red or amber, ordered by status and then by the next EMI date. Record each contact so the account history is complete.</p></div>
+      <button class="btn ghost sm" id="queue-refresh">Refresh</button></div>
+    <div id="queue"><div class="skeleton"></div></div>
+  </div>
+</Layout>
+
+<script>
+  import { $, $$, api, esc, num, showError, ACTION_COPY } from "../lib/api";
+  import { alpha, axisX, axisY, base, grad, mount, palette } from "../lib/charts";
+  import { parseStatement, sampleBankCSV } from "../lib/statement";
+
+  let statement: { rows: any[]; label: string; synthetic: boolean } | null = null;
+  const consent = $<HTMLInputElement>("#consent");
+
+  function refresh() {
+    $<HTMLButtonElement>("#run").disabled = !consent.checked || !statement;
+    $("#run-hint").hidden = consent.checked;
+  }
+  consent.addEventListener("change", () => {
+    if (consent.checked && $("#consent-card").classList.contains("consent-flash")) { // clear the "consent needed" prompt
+      $("#upload-msg").hidden = true;
+      $("#consent-card").classList.remove("consent-flash");
+    }
+    refresh();
+  });
+
+  // Samples are SYNTHETIC, so they load without consent and show an unlogged preview straight away;
+  // consent is still needed to upload a real statement or run a logged check.
+  async function loadSample(profile: string, preview = true) {
+    try {
+      const s = await api("/samples/" + profile);
+      statement = { rows: s.rows, label: `SYNTHETIC sample “${profile}” — not a real borrower`, synthetic: true };
+      $<HTMLInputElement>("#emi").value = s.emi;
+      $<HTMLInputElement>("#due_day").value = s.due_day;
+      $<HTMLInputElement>("#loan_id").value = `DEMO-${profile.toUpperCase()}`;
+      $$(".sample").forEach((x) => (x.style.outline = x.dataset.profile === profile ? "2px solid var(--sky)" : ""));
+      loaded();
+      if (preview) render(await api(`/samples/${profile}/check`), true);
+    } catch (e) { showError($("#error"), e); }
+  }
+  $$<HTMLButtonElement>(".sample").forEach((b) => b.addEventListener("click", () => loadSample(b.dataset.profile!)));
+
+  // Demo link: /watch?example=slipping gives consent on the demo's behalf for a SYNTHETIC sample and checks it.
+  const example = new URLSearchParams(location.search).get("example");
+  if (example && ["steady", "slipping", "stressed"].includes(example)) {
+    consent.checked = true;
+    refresh();
+    loadSample(example, false).then(() => $<HTMLButtonElement>("#run").click());
+  } else {
+    loadSample("slipping").then(() => { // from a case page: /watch?loan=TW-…
+      const loan = new URLSearchParams(location.search).get("loan");
+      if (loan) $<HTMLInputElement>("#loan_id").value = loan;
+    });
+  }
+
+  // ---- statement upload: consent first, then read the bank export and check it straight away ----
+  const csv = $<HTMLInputElement>("#csv"), upload = $("#upload");
+  function needConsent() {
+    const m = $("#upload-msg");
+    m.className = "error-box";
+    m.innerHTML = "<b>Borrower consent is needed first.</b> Statements are only read after the borrower agrees — tick the consent box above, then choose the file again.";
+    m.hidden = false;
+    const card = $("#consent-card");
+    card.classList.add("consent-flash");
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  csv.addEventListener("click", (e) => { if (!consent.checked) { e.preventDefault(); needConsent(); } });
+  csv.addEventListener("change", () => { const f = csv.files?.[0]; if (f) readFile(f); csv.value = ""; });
+  upload.addEventListener("dragover", (e) => { e.preventDefault(); upload.classList.add("drag"); });
+  upload.addEventListener("dragleave", () => upload.classList.remove("drag"));
+  upload.addEventListener("drop", (e) => {
+    e.preventDefault(); upload.classList.remove("drag");
+    const f = e.dataTransfer?.files?.[0];
+    if (!f) return;
+    if (!consent.checked) return needConsent();
+    readFile(f);
+  });
+
+  async function readFile(file: File) {
+    const m = $("#upload-msg"), pv = $("#upload-preview");
+    pv.hidden = true;
+    try {
+      const p = parseStatement(await file.text());
+      statement = { rows: p.rows, label: `Uploaded ${file.name}`, synthetic: false };
+      $$(".sample").forEach((x) => (x.style.outline = ""));
+      const id = $<HTMLInputElement>("#loan_id");
+      if (!id.value.trim() || id.value.startsWith("DEMO-")) id.value = file.name.replace(/\.[^.]+$/, "").toUpperCase().slice(0, 32);
+      m.className = "ok-box";
+      m.innerHTML = `<b>Read ${num(p.rows.length)} transactions</b> from ${fmt(p.from)} to ${fmt(p.to)}${p.skipped ? ` · ${p.skipped} non-transaction lines skipped` : ""}.
+        <div class="tiny" style="margin-top:4px">Columns used: ${Object.entries(p.columns).map(([k, v]) => `${k} = “${esc(v)}”`).join(" · ")}</div>`;
+      m.hidden = false;
+      pv.innerHTML = `<div class="table-wrap" style="margin-top:10px"><table>
+        <tr><th>Date</th><th>Narration</th><th class="num">Out</th><th class="num">In</th><th class="num">Balance</th></tr>
+        ${p.rows.slice(-6).map((r) => `<tr><td>${fmt(r.date)}</td><td class="small">${esc(r.description || "")}</td>
+          <td class="num">${r.debit ? num(r.debit) : ""}</td><td class="num">${r.credit ? num(r.credit) : ""}</td><td class="num">${num(r.balance)}</td></tr>`).join("")}
+        </table><div class="tiny muted" style="margin-top:4px">Last 6 transactions shown.</div></div>`;
+      pv.hidden = false;
+      loaded();
+      $<HTMLButtonElement>("#run").click(); // consent is given: check it now
+    } catch (e: any) {
+      m.className = "error-box";
+      m.innerHTML = `<b>Could not read ${esc(file.name)}.</b> ${esc(e.message)}`;
+      m.hidden = false;
+    }
+  }
+  const fmt = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+  $$<HTMLAnchorElement>("[data-sample]").forEach((a) => a.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const s = await api("/samples/" + a.dataset.sample);
+    const blob = new Blob([sampleBankCSV(s.rows)], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `sample-bank-statement-${a.dataset.sample}-SYNTHETIC.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }));
+
+  function loaded() {
+    const d = statement!.rows.map((r) => String(r.date)).sort();
+    $("#stmt-info").innerHTML = `<b>${esc(statement!.label)}</b> · ${statement!.rows.length} rows, ${esc(d[0])} → ${esc(d[d.length - 1])}`;
+    $("#error").hidden = true;
+    refresh();
+  }
+
+  const LEVEL_ICON: Record<string, string> = { green: "✓", amber: "!", red: "!!" };
+  const RULE_NAME: Record<string, string> = {
+    inflow_trend: "Income trend", inflow_gaps: "Weeks with no income", balance_before_emi: "Balance before EMI",
+    bills: "Bills paid late", obligation_ratio: "EMIs vs income", cash_out_speed: "How fast money is spent",
+  };
+
+  $("#run").addEventListener("click", async () => {
+    $("#error").hidden = true;
+    try {
+      render(await api("/watch", { method: "POST", body: JSON.stringify({
+        consent: consent.checked, emi: Number($<HTMLInputElement>("#emi").value), due_day: Number($<HTMLInputElement>("#due_day").value),
+        other_emis: Number($<HTMLInputElement>("#other_emis").value || 0), rows: statement!.rows,
+        loan_id: $<HTMLInputElement>("#loan_id").value.trim() || null }) }), false);
+      loadQueue();
+    } catch (e) { showError($("#error"), e); }
+  });
+
+  // ---- collections call list ----
+  const FOLLOW: Record<string, string> = { called: "Called", promised_to_pay: "Promised to pay", no_answer: "No answer",
+    emi_date_moved: "EMI date moved", restructuring: "Restructuring discussed", resolved: "Resolved" };
+  let showAll = false;
+  async function loadQueue() {
+    try {
+      const all = await api("/collections/queue");
+      const q = showAll ? all : all.slice(0, 8);
+      if (!q.length) {
+        $("#queue").innerHTML = `<div class="empty"><b>No loans need a call right now</b><div class="small">Run a logged check (tick consent, then “Check this loan”) on an amber or red borrower and it appears here.</div></div>`;
+        return;
+      }
+      $("#queue").innerHTML = `<div class="table-wrap"><table>
+        <tr><th>Loan</th><th>Status</th><th class="num">Next EMI in</th><th>Suggested step</th><th>Last follow-up</th><th></th></tr>
+        ${q.map((r: any, i: number) => `<tr>
+          <td><b>${r.loan_id === r.id ? `<span class="muted">No loan no.</span> · ${esc(r.id.slice(0, 6))}` : esc(r.loan_id)}</b>${r.synthetic ? ' <span class="badge neutral plain">demo</span>' : ""}
+            <div class="tiny muted">checked ${esc(r.ts.slice(0, 10))}${r.application_id ? ` · <a href="/app/case?id=${encodeURIComponent(r.application_id)}">open case</a>` : ""}</div></td>
+          <td><span class="badge ${esc(r.flag)}" style="text-transform:none">${r.flag === "red" ? "Call now" : "Keep an eye"}</span></td>
+          <td class="num">${r.days_to_next_emi != null ? r.days_to_next_emi + " days" : "–"}</td>
+          <td class="small">${esc(ACTION_COPY[r.suggested_action] || r.suggested_action)}</td>
+          <td class="small">${r.followup ? `<b>${esc(FOLLOW[r.followup.status] || r.followup.status)}</b> · ${esc(r.followup.officer)}<div class="tiny muted">${esc(r.followup.note || "")}</div>` : '<span class="muted">Not contacted yet</span>'}</td>
+          <td><button class="btn ghost sm" data-i="${i}">Record call</button></td></tr>
+          <tr id="fu-${i}" hidden><td colspan="6"><form class="fu" data-id="${esc(r.id)}" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+            <div class="field" style="min-width:190px"><label>Outcome</label><select name="status">${Object.entries(FOLLOW).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
+            <div class="field" style="flex:1;min-width:220px"><label>Note</label><input type="text" name="note" placeholder="e.g. Will pay on the 10th after weekly payout" /></div>
+            <div class="field" style="min-width:150px"><label>Officer</label><input type="text" name="officer" required minlength="2" /></div>
+            <button class="btn sm" type="submit">Save</button></form></td></tr>`).join("")}
+        </table></div>
+        ${all.length > 8 ? `<div class="btn-row" style="justify-content:center"><button class="btn ghost sm" id="queue-more">${showAll ? "Show the top 8" : `Show all ${all.length} loans`}</button></div>` : ""}`;
+      $("#queue-more")?.addEventListener("click", () => { showAll = !showAll; loadQueue(); });
+      let who = ""; try { who = localStorage.getItem("gigscore-officer") || ""; } catch { /* no storage */ }
+      $$<HTMLButtonElement>("#queue button[data-i]").forEach((b) => b.addEventListener("click", () => { const row = $(`#fu-${b.dataset.i}`); row.hidden = !row.hidden; }));
+      $$<HTMLFormElement>("#queue form.fu").forEach((f) => {
+        (f.elements.namedItem("officer") as HTMLInputElement).value = who;
+        f.addEventListener("submit", async (ev) => {
+          ev.preventDefault();
+          const d = new FormData(f);
+          try { localStorage.setItem("gigscore-officer", String(d.get("officer"))); } catch { /* no storage */ }
+          await api(`/decisions/${f.dataset.id}/followup`, { method: "POST", body: JSON.stringify(
+            { status: d.get("status"), note: d.get("note") || null, officer: d.get("officer") }) });
+          loadQueue();
+        });
+      });
+    } catch (e: any) { $("#queue").innerHTML = `<div class="error-box">${esc(e.message)}</div>`; }
+  }
+  $("#queue-refresh").addEventListener("click", loadQueue);
+  loadQueue();
+
+  function render(r: any, preview: boolean) {
+    const flagCopy: Record<string, string> = { green: "On track", amber: "Early warning", red: "At risk", insufficient_data: "Not enough data" };
+    $("#result").innerHTML = `${preview ? `<div class="note" style="margin-bottom:12px"><b>Preview</b> of a SYNTHETIC borrower (₹3,300 EMI due on the 5th) — not logged.
+        Give consent and press “Check this loan” to run a logged check with your own EMI details.</div>` : ""}
+      <div style="padding:16px 18px;border-radius:12px;background:var(--${r.flag === "green" ? "green" : r.flag === "amber" ? "amber" : r.flag === "red" ? "red" : "grey"}-soft);
+        display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div><div class="tiny muted">Loan status</div><div style="font-size:24px;font-weight:800">${esc(flagCopy[r.flag] || r.flag)}</div></div>
+        <span class="badge ${esc(r.flag)}">${esc(r.flag.replace("_", " "))}</span></div>
+      <div class="note" style="margin-top:14px"><b>Next step:</b> ${esc(ACTION_COPY[r.suggested_action] || r.suggested_action)}</div>
+      <p class="tiny muted" style="margin:10px 0 14px">${r.weeks_of_data} weeks to ${esc(r.statement_end)}${r.days_to_next_emi != null ? ` · next EMI in ${r.days_to_next_emi} days` : ""}${r.synthetic ? " · SYNTHETIC data" : ""}${r.explain_id ? ` · id <code>${esc(r.explain_id)}</code>` : ""}</p>
+      <div class="grid cols-2">${r.rules.map((x: any) => `
+        <div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface-2)">
+          <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+            <b class="small">${esc(RULE_NAME[x.rule] || x.rule)}</b><span class="badge ${esc(x.level)}">${LEVEL_ICON[x.level] || ""} ${esc(x.level)}</span></div>
+          <p class="tiny muted" style="margin-top:6px">${esc(x.detail)}</p></div>`).join("")}</div>`;
+    const n = r.weekly_inflow.length;
+    mount($("#inflow"), () => {
+      const c = palette();
+      const hot = r.flag === "red" ? c.rose : r.flag === "amber" ? c.gold : c.mint;
+      return { ...base({ tooltip: { trigger: "axis", valueFormatter: (x: number) => "₹" + num(Math.round(x)) } }),
+        xAxis: axisX({ type: "category", data: r.weekly_inflow.map((_: number, i: number) => "W" + (i + 1)) }),
+        yAxis: axisY({ type: "value", axisLabel: { color: c.muted, formatter: (x: number) => "₹" + (x / 1000).toFixed(0) + "k" } }),
+        series: [{ type: "bar", name: "Weekly inflow", barWidth: "58%", data: r.weekly_inflow.map((x: number, i: number) => ({ value: x,
+          itemStyle: { borderRadius: [9, 9, 3, 3], color: i >= n - 4 ? grad(hot, alpha(hot, 0.35)) : grad(c.sky, alpha(c.sky, 0.3)) } })),
+          markArea: { silent: true, itemStyle: { color: alpha(hot, 0.06) }, label: { color: hot, fontSize: 11 },
+            data: [[{ name: "last 4 weeks", xAxis: "W" + (n - 3) }, { xAxis: "W" + n }]] } }] };
+    });
+  }
+</script>

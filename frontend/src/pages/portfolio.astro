@@ -1,0 +1,138 @@
+---
+import Layout from "../layouts/AppLayout.astro";
+import Icon from "../components/Icon.astro";
+---
+<Layout title="Decision log" active="portfolio"
+  subtitle="The complete record of recommendations, officer decisions and early-warning checks — with inputs, reasons and model version — for audit, management reporting and customer queries."
+  steps={["The headline measures summarise activity recorded in this workspace.",
+          "<b>Validation benchmark</b> shows how each recommendation band performed on the 98,364 October 2018 loans.",
+          "Select any entry to view the full record, or open the related case."]}>
+  <button slot="actions" class="btn ghost" id="refresh">Refresh</button>
+
+  <section class="grid cols-4" id="kpis">
+    {[0, 1, 2, 3].map(() => <div class="card kpi"><div class="skeleton" style="width:60%"></div><div class="skeleton" style="height:28px;margin-top:10px"></div></div>)}
+  </section>
+
+  <section class="grid cols-2" style="margin-top:16px">
+    <div class="card">
+      <div class="card-head"><div><h2>Recommendations recorded</h2><p>By band, including practice applications.</p></div></div>
+      <div id="bands" class="chart short"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Validation benchmark</h2><p id="book-sub">October 2018 loans (real), with today's cut-offs.</p></div></div>
+      <div id="book"></div>
+    </div>
+  </section>
+
+  <div class="card" style="margin-top:16px">
+    <div class="card-head"><div><h2>Recent entries</h2><p>Select an entry to view the full record.</p></div>
+      <div class="segmented" id="filter">
+        <label><input type="radio" name="kind" value="" checked /><span>All</span></label>
+        <label><input type="radio" name="kind" value="score" /><span>Applications</span></label>
+        <label><input type="radio" name="kind" value="watch" /><span>Early warning</span></label>
+      </div></div>
+    <div id="decisions"></div>
+  </div>
+
+  <div id="drawer" hidden>
+    <div class="drawer-backdrop" id="drawer-close-bg"></div>
+    <aside class="drawer">
+      <div class="card-head"><h2>Decision detail</h2><button class="btn ghost" id="drawer-close"><Icon name="x" size={16} /></button></div>
+      <div id="drawer-body"></div>
+    </aside>
+  </div>
+</Layout>
+
+<script>
+  import { $, $$, api, esc, pct, num, BAND_COPY } from "../lib/api";
+  import { base, mount, palette } from "../lib/charts";
+
+  const kind = () => $<HTMLInputElement>('#filter input:checked').value;
+
+  async function load() {
+    try {
+      const [p, ds] = await Promise.all([api("/portfolio/summary"), api("/decisions?limit=40" + (kind() ? `&kind=${kind()}` : ""))]);
+      const L = p.live, B = p.historical_test_book;
+      const watched = Object.values(L.watched as Record<string, number>).reduce((a, b) => a + b, 0);
+      const tiles = [
+        ["Applications checked", num(L.scored), `${num(L.synthetic_decisions)} of all decisions are practice / sample ones`, true],
+        ["Approved", pct(L.approval_rate), "of applications checked here"],
+        ["Officer overrides", L.officer_decided ? pct(L.overrides / L.officer_decided, 0) : "–",
+          `${num(L.overrides)} of ${num(L.officer_decided)} officer decisions went against GigScore`],
+        ["Running loans checked", num(watched), `${num(L.watched.red || 0)} red (call now) · ${num(L.watched.amber || 0)} amber`],
+      ];
+      $("#kpis").innerHTML = tiles.map(([l, v, s, acc]) =>
+        `<div class="card kpi ${acc ? "accent" : ""}"><div class="label">${esc(l)}</div><div class="value">${esc(v)}</div><div class="sub">${esc(s)}</div></div>`).join("");
+
+      const bands = ["approve", "refer", "decline"];
+      mount($("#bands"), () => {
+        const c = palette();
+        const cols = [c.mint, c.gold, c.rose];
+        return { ...base({ tooltip: { trigger: "item", formatter: (x: any) => `${x.name}: <b>${num(x.value)}</b> (${x.percent}%)` } }),
+          legend: { orient: "vertical", right: 10, top: "middle", textStyle: { color: c.text2 }, icon: "circle", itemWidth: 9 },
+          series: [{ type: "pie", radius: ["58%", "82%"], center: ["38%", "50%"], padAngle: 3, itemStyle: { borderRadius: 8 },
+            label: { show: true, position: "center", formatter: () => `{v|${num(L.scored)}}\n{l|scored}`,
+              rich: { v: { fontSize: 30, fontWeight: 800, color: c.text, fontFamily: "Public Sans" }, l: { fontSize: 12, color: c.muted } } },
+            data: bands.map((b, i) => ({ name: BAND_COPY[b], value: L.bands[b]?.n || 0, itemStyle: { color: cols[i] } })) }] };
+      });
+
+      $("#book-sub").textContent = `${B.data} · ${num(B.n)} loans · actual default rate ${pct(B.default_rate)}`;
+      $("#book").innerHTML = `<div class="table-wrap"><table>
+        <tr><th>Decision</th><th class="num">Share of applicants</th><th class="num">Missed first EMI</th></tr>
+        ${bands.map((b) => `<tr><td><span class="badge ${b}" style="text-transform:none">${BAND_COPY[b]}</span></td><td class="num">${pct(B.band_table[b].share)}</td>
+          <td class="num"><b>${pct(B.band_table[b].bad_rate)}</b></td></tr>`).join("")}</table></div>
+        <div class="note" style="margin-top:14px">${esc(p.par)}</div>`;
+
+      $("#decisions").innerHTML = ds.length ? `<div class="table-wrap"><table>
+        <tr><th>When (UTC)</th><th>Type</th><th>GigScore advice</th><th>Officer / follow-up</th><th class="num">Score</th><th class="num">Chance of missing EMI</th><th></th></tr>
+        ${ds.map((d: any) => `<tr class="clickable" data-id="${esc(d.id)}">
+          <td>${esc(d.ts.replace("T", " ").slice(0, 16))}</td><td>${d.kind === "watch" ? "Early warning" : "Application"}</td>
+          <td><span class="badge ${esc(d.outcome)}" style="text-transform:none">${esc(BAND_COPY[d.outcome] || (d.outcome || "").replaceAll("_", " "))}</span></td>
+          <td class="small">${officerCell(d)}</td>
+          <td class="num">${esc(d.score ?? "–")}</td><td class="num">${d.pd != null ? pct(d.pd) : "–"}</td>
+          <td>${d.synthetic ? '<span class="badge neutral plain">practice</span>' : ""}</td></tr>`).join("")}
+        </table></div>`
+        : `<div class="empty"><b>Nothing saved yet</b><div class="small">Check an application or a running loan and it appears here.</div></div>`;
+      $$("#decisions tr.clickable").forEach((tr) => tr.addEventListener("click", () => open((tr as HTMLElement).dataset.id!)));
+    } catch (e: any) {
+      $("#kpis").innerHTML = `<div class="error-box" style="grid-column:1/-1">${esc(e.message)}</div>`;
+    }
+  }
+
+  const FOLLOW: Record<string, string> = { called: "Called", promised_to_pay: "Promised to pay", no_answer: "No answer",
+    emi_date_moved: "EMI date moved", restructuring: "Restructuring discussed", resolved: "Resolved" };
+  function officerCell(d: any) {
+    if (d.kind === "score") {
+      if (!d.final) return `<span class="muted">${d.outcome === "refer" ? "Awaiting officer" : "—"}</span>`;
+      const over = d.outcome !== "refer" && d.final.status !== d.outcome;
+      return `<b>${esc(BAND_COPY[d.final.status])}</b> · ${esc(d.final.officer)}${over ? ' <span class="badge amber plain">override</span>' : ""}`;
+    }
+    return d.followup ? `${esc(FOLLOW[d.followup.status] || d.followup.status)} · ${esc(d.followup.officer)}` : '<span class="muted">—</span>';
+  }
+
+  async function open(id: string) {
+    const d = await api("/decisions/" + id);
+    const acts = (d.actions || []).slice().reverse();
+    $("#drawer-body").innerHTML = `
+      <p class="small muted">${esc(d.ts)} · ${d.kind === "watch" ? "Early warning" : "Application"} · ${esc(d.model_version)}</p>
+      <p style="margin:10px 0">GigScore: <span class="badge ${esc(d.outcome)}" style="text-transform:none">${esc(BAND_COPY[d.outcome] || d.outcome)}</span>
+        ${d.synthetic ? '<span class="badge neutral plain">practice / SYNTHETIC</span>' : ""}</p>
+      <p class="tiny muted">Decision id <code>${esc(d.id)}</code></p>
+      ${d.inputs.application_id ? `<a class="btn sm" style="margin-top:8px" href="/app/case?id=${encodeURIComponent(d.inputs.application_id)}">Open case ${esc(d.inputs.application_id)} →</a>` : ""}
+      ${d.output.reasons ? `<h3 style="margin:16px 0 6px">Reasons given</h3><ul>${d.output.reasons.map((r: string) => `<li>${esc(r)}</li>`).join("")}</ul>` : ""}
+      <h3 style="margin:16px 0 6px">What people did</h3>
+      ${acts.length ? `<ul class="timeline">${acts.map((a: any) => `<li><b>${esc(a.kind === "final" ? "Final decision: " + BAND_COPY[a.status] : FOLLOW[a.status] || a.status)}</b>
+          · ${esc(a.officer || "")} <span class="tiny muted">${esc(a.ts.replace("T", " ").slice(0, 16))}</span>${a.note ? `<div class="small muted">${esc(a.note)}</div>` : ""}</li>`).join("")}</ul>`
+        : '<p class="small muted">No officer action recorded yet.</p>'}
+      <h3 style="margin:16px 0 6px">Inputs</h3><pre class="json">${esc(JSON.stringify(d.inputs, null, 2))}</pre>
+      <h3 style="margin:16px 0 6px">Output</h3><pre class="json">${esc(JSON.stringify(d.output, null, 2))}</pre>`;
+    $("#drawer").hidden = false;
+  }
+  const close = () => ($("#drawer").hidden = true);
+  $("#drawer-close").addEventListener("click", close);
+  $("#drawer-close-bg").addEventListener("click", close);
+  document.addEventListener("keydown", (e) => e.key === "Escape" && close());
+  $("#refresh").addEventListener("click", load);
+  $$("#filter input").forEach((i) => i.addEventListener("change", load));
+  load();
+</script>

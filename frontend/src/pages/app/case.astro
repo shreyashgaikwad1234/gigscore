@@ -1,0 +1,354 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+import Icon from "../../components/Icon.astro";
+---
+<AppLayout title="Case" active="inbox" bare>
+  <div id="case"><div class="skeleton" style="height:120px"></div></div>
+  <div id="icon-bank" hidden>
+    {["bolt", "user", "check", "file", "watch", "phone", "about"].map((n) => <span data-name={n}><Icon name={n} size={16} /></span>)}
+  </div>
+</AppLayout>
+
+<script>
+  import { $, $$, api, esc, inr, pct, getModel, BAND_COPY, ACTION_COPY } from "../../lib/api";
+  import { ago, getOfficer, STATUS } from "../../lib/workspace";
+  import { gaugeSvg } from "../../lib/gauge";
+  import { alpha, axisX, axisY, base, grad, mount, palette } from "../../lib/charts";
+  import { LANGS, reason as tr, t, type Lang } from "../../lib/letters";
+
+  const id = new URLSearchParams(location.search).get("id") || "";
+  const fmtDate = (iso: string) => new Date(iso).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const day = (iso: string, lang: Lang = "en") => new Date(iso).toLocaleDateString(lang === "en" ? "en-IN" : lang + "-IN", { day: "2-digit", month: "long", year: "numeric" });
+  const RULE: Record<string, string> = { inflow_trend: "Income trend", inflow_gaps: "Weeks with no income", balance_before_emi: "Balance before EMI",
+    bills: "Bills paid late", obligation_ratio: "EMIs vs income", cash_out_speed: "How fast money is spent" };
+  const FOLLOW: Record<string, string> = { called: "Called", promised_to_pay: "Promised to pay", no_answer: "No answer",
+    emi_date_moved: "EMI date moved", restructuring: "Restructuring discussed", resolved: "Resolved" };
+  const EMP: Record<string, string> = { "Self employed": "Self-employed / gig", Salaried: "Salaried", Unknown: "Not recorded" };
+  const NOSCORE: Record<string, string> = { no_history: "No bureau history at all", thin_history: "Too little history to score",
+    not_enough_info: "Not enough information", inactive: "No recent credit activity", no_updates_36m: "No updates in 3 years", guarantor_only: "Only ever a guarantor" };
+  const emi = (loan: number) => { const r = 0.015, n = 36; return Math.round((loan * r * (1 + r) ** n) / ((1 + r) ** n - 1)); };
+  const TABS = ["overview", "application", "watch", "timeline", "letter"];
+
+  let C: any, M: any, lang: Lang = "en", pending: { timer: number; tick: number } | null = null;
+
+  async function load() {
+    try { [C, M] = await Promise.all([api("/cases/" + encodeURIComponent(id)), getModel()]); }
+    catch (e: any) {
+      $("#case").innerHTML = `<div class="card empty"><b>Case not found</b><div class="small">${esc(e.message)} — <a href="/app">back to the inbox</a></div></div>`;
+      return;
+    }
+    document.title = `${C.applicant_name || C.application_id} · GigScore workspace`;
+    render();
+  }
+
+  function facts() {
+    const inp = C.application.inputs, out = C.application.output;
+    const cuts = M.config.bands[out.model_used] || M.config.bands[M.model];
+    const pos = (s: number) => `${((s - 300) / 600) * 100}%`;
+    const bar = `linear-gradient(90deg, var(--red) 0 ${pos(cuts.refer)}, var(--amber) ${pos(cuts.refer)} ${pos(cuts.approve)}, var(--green) ${pos(cuts.approve)})`;
+    const waited = C.final ? `decided in ${ago(C.ts).replace(/ \d+ min$/, "")}` : `waiting ${ago(C.ts)}`;
+    return `<div class="facts">
+      <div><div class="l">GigScore</div><div class="v">${out.score}</div><div class="bandbar" style="background:${bar}"><i style="left:calc(${pos(out.score)} - 1px)"></i></div></div>
+      <div><div class="l">Chance of missing 1st EMI</div><div class="v">${pct(out.pd)}</div><div class="s">safer than ${pct(out.percentile, 0)} of applicants</div></div>
+      <div><div class="l">Loan</div><div class="v">${inr(inp.disbursed_amount)}</div><div class="s">${pct(inp.disbursed_amount / inp.asset_cost, 0)} of ${inr(inp.asset_cost)}</div></div>
+      <div><div class="l">Estimated EMI</div><div class="v">${inr(emi(inp.disbursed_amount))}</div><div class="s">a month · 36 months</div></div>
+      <div><div class="l">Credit bureau</div><div class="v">${inp.bureau_score || "No score"}</div><div class="s">${esc(inp.bureau_score ? "bureau score" : (NOSCORE[inp.bureau_status] || "").toLowerCase())}</div></div>
+      <div><div class="l">Applicant</div><div class="v" style="font-size:16px;margin-top:8px">${esc(EMP[inp.employment_type] || inp.employment_type)}</div><div class="s">age ${inp.age} · ${waited}</div></div>
+    </div>`;
+  }
+
+  function render() {
+    const [label, tone] = STATUS(C);
+    const lastWatch = C.watch[C.watch.length - 1];
+    $("#case").innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <a class="small" href="/app">← Decision queue</a>
+        <span class="tiny muted"><kbd>J</kbd> <kbd>K</kbd> next / previous case · <kbd>?</kbd> all shortcuts</span>
+      </div>
+      <div class="case-head" style="margin-top:12px">
+        <div>
+          <div class="case-name">${esc(C.applicant_name || "Unnamed applicant")}</div>
+          <div class="case-meta"><span>${esc(C.application_id)}</span><span>${esc(C.branch || "No branch")}</span>
+            <span>Applied ${fmtDate(C.ts)}</span>${C.loan_numbers.length ? `<span>Loan ${esc(C.loan_numbers.join(", "))}</span>` : ""}
+            ${C.synthetic ? '<span class="badge neutral plain">demo record</span>' : ""}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <span class="badge ${tone}" style="font-size:13.5px;padding:6px 12px;text-transform:none">${label}</span>
+          ${lastWatch ? `<span class="badge ${esc(lastWatch.outcome)}" style="font-size:13.5px;padding:6px 12px;text-transform:none">Early warning: ${esc(lastWatch.outcome)}</span>` : ""}
+        </div>
+      </div>
+      ${facts()}
+      <div class="case-grid" style="margin-top:6px">
+        <div>
+          <div class="tabs" role="tablist">
+            ${[["overview", "Recommendation"], ["application", "Application"], ["watch", `Monitoring${C.watch.length ? ` (${C.watch.length})` : ""}`],
+               ["timeline", "History"], ["letter", "Decision letter"]].map(([k, l], i) =>
+              `<button role="tab" data-tab="${k}" aria-selected="${i === 0}">${l} <kbd style="margin-left:4px">${i + 1}</kbd></button>`).join("")}
+          </div>
+          <section data-panel="overview">${overview()}</section>
+          <section data-panel="application" hidden>${application()}</section>
+          <section data-panel="watch" hidden>${watchPanel()}</section>
+          <section data-panel="timeline" hidden>${timeline()}</section>
+          <section data-panel="letter" hidden>${letterPanel()}</section>
+        </div>
+        <aside class="case-side">${side()}</aside>
+      </div>`;
+
+    $$<HTMLButtonElement>(".tabs button").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab!)));
+    const tab = location.hash.slice(1);
+    if (TABS.includes(tab)) showTab(tab);
+    wire();
+  }
+
+  function showTab(k: string) {
+    $$<HTMLButtonElement>(".tabs button").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.tab === k)));
+    $$("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== k));
+    if (k === "watch") chart();
+    history.replaceState(null, "", `?id=${encodeURIComponent(id)}#${k}`);
+  }
+
+  function overview() {
+    const A = C.application, out = A.output;
+    const cuts = M.config.bands[out.model_used] || M.config.bands[M.model];
+    const raising = A.outcome !== "approve";
+    return `<div class="card">
+        <div class="card-head" style="margin-bottom:4px"><div><h2>Recommendation</h2><p>${esc(out.model_version)}${C.rescored ? ` · re-scored ${C.rescored}×` : ""}</p></div>
+          <span class="badge ${esc(A.outcome)}" style="font-size:13.5px;padding:6px 12px;text-transform:none">${esc(BAND_COPY[A.outcome])}</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:20px;align-items:center">
+          <div style="text-align:center">${gaugeSvg(out.score, cuts)}<div style="font:800 42px/1 Archivo">${out.score}</div><div class="tiny muted">out of 900</div></div>
+          <div>
+            <h3 style="margin-bottom:8px">${raising ? "Main reasons the risk is higher" : "Main reasons this looks safe"}</h3>
+            <div class="stack" style="gap:8px">${out.reasons.map((x: string) => `<div style="display:flex;gap:10px;padding:10px 12px;border-radius:8px;background:var(--${raising ? "red" : "green"}-soft)">
+              <b style="color:var(--${raising ? "red" : "green"})">${raising ? "↑" : "↓"}</b><span>${esc(x)}</span></div>`).join("")}</div>
+            <p class="tiny muted" style="margin-top:10px">Approve from ${cuts.approve} · refer ${cuts.refer}–${cuts.approve - 1} · decline below ${cuts.refer} · <a href="/analytics#playground">how these cut-offs perform</a></p>
+            <p class="tiny muted" style="margin-top:4px">Method: <a href="/about">model governance</a> · evidence: <a href="/analytics">validation on 98,364 loans</a></p>
+          </div></div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Checks before deciding</h2>
+        <ul class="small" style="color:var(--text-2);margin:10px 0 0;padding-left:18px;line-height:1.8">
+          <li>Check the ID documents match the application (${esc(Object.entries(C.application.inputs.docs || {}).filter(([k, v]) => v && k !== "mobile").map(([k]) => k.toUpperCase()).join(", ") || "none given")}).</li>
+          ${C.application.inputs.bureau_score ? "" : "<li>No bureau score: ask for 3–6 months of bank / UPI statements to see regular income.</li>"}
+          <li>If the loan is a large share of the price, a bigger down payment is the quickest way to lower the risk — assess the effect in the <a href="/apply">sensitivity analysis</a> on a new application.</li>
+        </ul>
+      </div>`;
+  }
+
+  function side() {
+    const override = C.final && C.band !== "refer" && C.final.status !== C.band;
+    if (!C.final) {
+      const mine = C.assigned?.officer === getOfficer();
+      return `<div class="card">
+          <h2>Your decision</h2>
+          <p class="small muted" style="margin-top:4px">${C.band === "refer" ? "GigScore has referred this application for a credit officer's decision." : "GigScore recommends; the decision is yours. A departure from the recommendation requires a recorded reason."}</p>
+          ${C.assigned ? `<p class="small" style="margin-top:8px">With <b>${esc(C.assigned.officer)}</b> · assigned ${ago(C.assigned.ts)} ago</p>` : ""}
+          ${!mine ? `<button class="btn ghost sm" id="assign" style="margin-top:10px">Assign to me</button>` : ""}
+          <form id="final-form">
+            <div class="decide">
+              <label><input type="radio" name="decision" value="approve" ${C.band === "approve" ? "checked" : ""} /><span>Approve<kbd>A</kbd></span></label>
+              <label><input type="radio" name="decision" value="decline" ${C.band === "decline" ? "checked" : ""} /><span>Decline<kbd>D</kbd></span></label>
+            </div>
+            <div class="field" style="margin-top:12px"><label>Reason (recorded)</label><textarea name="reason" class="plain-text" rows="3" required minlength="10"
+              placeholder="e.g. Verified 6 months of platform payouts on the UPI statement"></textarea></div>
+            <div class="small muted" style="margin-top:6px">As <b>${esc(getOfficer())}</b></div>
+            <button class="btn cta" type="submit" style="width:100%;margin-top:12px">Record decision <kbd style="background:transparent;color:#fff;border-color:rgba(255,255,255,.5)">Ctrl ↵</kbd></button>
+            <div id="final-msg" hidden></div>
+          </form>
+        </div>`;
+    }
+    return `<div class="card">
+        <h2>Officer's decision</h2>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"><span class="badge ${esc(C.final.status)}" style="font-size:14px;padding:6px 12px;text-transform:none">${C.final.status === "approve" ? "Approved" : "Declined"}</span>
+          ${override ? '<span class="badge amber plain">Override of recommendation</span>' : ""}</div>
+        <p class="small" style="margin-top:10px">by <b>${esc(C.final.officer)}</b> · ${fmtDate(C.final.ts)}</p>
+        <div class="plain">${esc(C.final.note || "")}</div>
+        ${C.final.status === "approve" && !C.disbursed ? `<form id="disburse-form" class="officer-box">
+            <h3>Disbursal</h3><p class="small muted" style="margin-top:4px">Once disbursed, the loan can be enrolled in early-warning monitoring.</p>
+            <div class="field" style="margin-top:10px"><label>Loan account no.</label><input name="loan_no" type="text" value="TW-${esc(C.application_id.replace(/^APP-/, ""))}" /></div>
+            <button class="btn green" type="submit" style="width:100%;margin-top:10px">Mark as disbursed</button></form>` : ""}
+        ${C.disbursed ? `<div class="ok-box">Disbursed as loan <b>${esc(C.disbursed.note)}</b> on ${day(C.disbursed.ts)}.</div>` : ""}
+        <button class="btn ghost sm" style="margin-top:12px" id="to-letter">View the decision letter →</button>
+      </div>`;
+  }
+
+  function application() {
+    const inp = C.application.inputs;
+    const docs = Object.entries(inp.docs || {}).filter(([k, v]) => v && k !== "mobile").map(([k]) =>
+      ({ aadhar: "Aadhaar", pan: "PAN", voterid: "Voter ID", driving: "Driving licence", passport: "Passport" } as any)[k] || k).join(", ") || "None";
+    const rows: [string, string][] = [
+      ["Applicant", esc(inp.applicant_name || "—")], ["Application no.", esc(inp.application_id)], ["Branch", esc(inp.branch || "—")],
+      ["Loan amount", inr(inp.disbursed_amount)], ["Vehicle price", inr(inp.asset_cost)],
+      ["Loan as share of price", pct(inp.disbursed_amount / inp.asset_cost, 0)], ["Estimated EMI", inr(emi(inp.disbursed_amount)) + " a month (1.5%/month, 36 months)"],
+      ["Age", String(inp.age)], ["Employment", esc(EMP[inp.employment_type] || inp.employment_type)], ["ID documents", docs],
+      ["Bureau score", inp.bureau_score ? String(inp.bureau_score) : `None — ${esc(NOSCORE[inp.bureau_status] || inp.bureau_status || "")}`],
+      ["Loans taken before", String(inp.pri_no_of_accts)], ["Still running / overdue", `${inp.pri_active_accts} / ${inp.pri_overdue_accts}`],
+      ["Outstanding balance", inr(inp.pri_current_balance)], ["Current EMIs", inr(inp.primary_instal_amt) + " a month"],
+      ["Loan enquiries (recent)", String(inp.inquiries)], ["Credit history", `${inp.credit_history_months} months`],
+      ["State code", inp.state_id != null ? `${inp.state_id} (fairness checks only — not used to decide)` : "—"],
+    ];
+    return `<div class="card"><div class="card-head"><div><h2>Application data</h2><p>As submitted for scoring, from the decision log.</p></div></div>
+      <div class="kv">${rows.map(([k, v]) => `<div>${k}</div><div>${v}</div>`).join("")}</div></div>`;
+  }
+
+  function watchPanel() {
+    if (!C.disbursed && !C.watch.length)
+      return `<div class="card empty"><b>Monitoring begins after disbursal</b><div class="small">Once disbursed, the loan can be assessed from the borrower's statement, with consent, in the <a href="/watch">early-warning monitor</a>.</div></div>`;
+    const w = C.watch[C.watch.length - 1], o = w?.output;
+    const loan = C.disbursed?.note || C.loan_numbers[0] || "";
+    return `<div class="card">
+        <div class="card-head"><div><h2>Latest check</h2><p>${w ? fmtDate(w.ts) : "No check yet"}</p></div>
+          <a class="btn sm" href="/watch?loan=${encodeURIComponent(loan)}">Run a new check</a></div>
+        ${w ? `<div style="padding:12px 14px;border-radius:8px;background:var(--${w.outcome === "red" ? "red" : w.outcome === "amber" ? "amber" : "green"}-soft)">
+            <b>${w.outcome === "red" ? "At risk" : w.outcome === "amber" ? "Early warning" : "On track"}</b> — ${esc(ACTION_COPY[o.suggested_action] || o.suggested_action)}</div>
+          <div class="grid cols-2" style="margin-top:12px;gap:10px">${(o.rules || []).map((r: any) => `<div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+            <div style="display:flex;justify-content:space-between;gap:8px"><b class="small">${esc(RULE[r.rule] || r.rule)}</b><span class="badge ${esc(r.level)}">${esc(r.level)}</span></div>
+            <p class="tiny muted" style="margin-top:4px">${esc(r.detail)}</p></div>`).join("")}</div>` : `<div class="empty small">No statement checked yet.</div>`}
+      </div>
+      <div class="grid cols-2" style="margin-top:16px">
+        <div class="card"><div class="card-head"><div><h2>Money coming in, week by week</h2><p>Latest statement; last four weeks in colour.</p></div></div><div id="c-inflow" class="chart short"></div></div>
+        <div class="card"><div class="card-head"><div><h2>All checks</h2></div></div>
+          <table>${C.watch.slice().reverse().map((x: any) => `<tr><td class="small">${fmtDate(x.ts)}</td><td><span class="badge ${esc(x.outcome)}">${esc(x.outcome)}</span></td>
+            <td class="small">${esc(ACTION_COPY[x.output.suggested_action] || "")}</td></tr>`).join("") || "<tr><td class='muted'>None yet</td></tr>"}</table></div>
+      </div>`;
+  }
+
+  function chart() {
+    const w = C.watch[C.watch.length - 1];
+    if (!w || !document.getElementById("c-inflow")) return;
+    const v = w.output.weekly_inflow, n = v.length;
+    mount($("#c-inflow"), () => {
+      const c = palette(), hot = w.outcome === "red" ? c.rose : w.outcome === "amber" ? c.gold : c.mint;
+      return { ...base({ tooltip: { trigger: "axis", valueFormatter: (x: number) => inr(Math.round(x)) }, grid: { left: 8, right: 10, top: 16, bottom: 24, containLabel: true } }),
+        legend: { show: false },
+        xAxis: axisX({ type: "category", data: v.map((_: number, i: number) => "W" + (i + 1)) }),
+        yAxis: axisY({ type: "value", axisLabel: { color: c.muted, formatter: (x: number) => "₹" + (x / 1000).toFixed(0) + "k" } }),
+        series: [{ type: "bar", barWidth: "58%", data: v.map((x: number, i: number) => ({ value: x, itemStyle: { borderRadius: [4, 4, 0, 0],
+          color: i >= n - 4 ? hot : alpha(c.sky, 0.5) } })) }] };
+    });
+  }
+
+  function timeline() {
+    const ev = C.timeline.slice().reverse();
+    const item = (e: any): [string, string, string] => {
+      switch (e.type) {
+        case "scored": return ["bolt", "", `GigScore scored the application: <b>${e.score}</b> — ${esc(BAND_COPY[e.band])}`];
+        case "assign": return ["user", "", `Assigned to <b>${esc(e.officer)}</b>`];
+        case "final": return ["check", e.status === "approve" ? "green" : "red", `<b>${e.status === "approve" ? "Approved" : "Declined"}</b> by ${esc(e.officer)}${e.note ? `<div class="small muted">“${esc(e.note)}”</div>` : ""}`];
+        case "disbursed": return ["file", "gold", `Disbursed as loan <b>${esc(e.note)}</b> by ${esc(e.officer)}`];
+        case "watch": return ["watch", e.flag === "red" ? "red" : e.flag === "amber" ? "amber" : "green", `Early-warning check: <b>${esc(e.flag)}</b><div class="small muted">${esc(ACTION_COPY[e.action] || "")}</div>`];
+        case "followup": return ["phone", "", `Collections: <b>${esc(FOLLOW[e.status] || e.status)}</b> — ${esc(e.officer)}${e.note ? `<div class="small muted">${esc(e.note)}</div>` : ""}`];
+        default: return ["about", "", esc(e.type)];
+      }
+    };
+    const icons: Record<string, string> = Object.fromEntries([...document.querySelectorAll<HTMLElement>("#icon-bank [data-name]")].map((s) => [s.dataset.name!, s.innerHTML]));
+    return `<div class="card"><div class="card-head"><div><h2>Case history</h2><p>Most recent first. Every entry is held in the audit log.</p></div></div>
+      <ul class="tl">${ev.map((e: any) => { const [ic, tone, text] = item(e);
+        return `<li><span class="ic ${tone}">${icons[ic] || ""}</span><div><div>${text}</div><div class="tiny muted">${fmtDate(e.ts)}</div></div></li>`; }).join("")}</ul></div>`;
+  }
+
+  function letterPanel() {
+    if (!C.final) return `<div class="card empty"><b>Available once a decision is recorded</b><div class="small">Record the decision in the panel on the right.</div></div>`;
+    return `<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+        <div class="segmented" id="lang">${LANGS.map(([k, l]) => `<label><input type="radio" name="lang" value="${k}" ${k === lang ? "checked" : ""} /><span>${l}</span></label>`).join("")}</div>
+        <button class="btn" id="print"><span>Print / save as PDF</span></button>
+        <span class="small muted">Uses the browser's print dialog — choose “Save as PDF”.</span></div>
+      <div id="letter-wrap">${letter()}</div>`;
+  }
+
+  function letter() {
+    const inp = C.application.inputs, out = C.application.output, ok = C.final.status === "approve";
+    return `<div class="letter" id="letter" lang="${lang}">
+        <div class="lh"><div><b style="font-size:18px;color:#02416e">${t("nbfc", lang)}</b><div style="font-size:12px;color:#66717f">${esc(t("branch", lang, { b: inp.branch || "" }))}</div></div>
+          <div style="text-align:right;font-size:13px">${day(C.final.ts, lang)}<br />${t("ref", lang)}: ${esc(C.application_id)}</div></div>
+        <p>${t("to", lang)}<br /><b>${esc(inp.applicant_name || "")}</b></p>
+        <h2>${t(ok ? "title_ok" : "title_no", lang)}</h2>
+        ${ok ? `<p>${t("ok_p1", lang)}</p><p>${t("ok_amount", lang, { loan: inr(inp.disbursed_amount), price: inr(inp.asset_cost) })}<br />${t("ok_emi", lang, { emi: inr(emi(inp.disbursed_amount)) })}</p><p>${t("ok_p3", lang)}</p>`
+          : `<p>${t("no_p1", lang)}</p><p>${t("no_reasons", lang)}</p><ol>${out.reasons.map((r: string) => `<li>${esc(tr(r, lang))}</li>`).join("")}</ol><p>${t("no_p3", lang)}</p>`}
+        <p>${t("fair", lang)}</p>
+        <p style="margin-top:30px">${t("sign", lang)}<br /><b>${esc(C.final.officer)}</b><br />${t("role", lang)}</p>
+        <p style="font-size:11.5px;color:#66717f;margin-top:24px;border-top:1px solid #e4e0d6;padding-top:8px">${t("grievance", lang)}${C.synthetic ? " · " + t("demo", lang) : ""}</p>
+      </div>`;
+  }
+
+  // ---- record a decision, with a 5-second undo before it is saved ----
+  function toast(text: string, onUndo: () => void, ms: number) {
+    document.querySelector(".toast")?.remove();
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `<span>${text}</span><button type="button">Undo</button><i class="bar" style="animation-duration:${ms}ms"></i>`;
+    el.querySelector("button")!.addEventListener("click", () => { onUndo(); el.remove(); });
+    document.body.appendChild(el);
+    return () => el.remove();
+  }
+
+  function wire() {
+    const A = C.application;
+    const post = (path: string, body: any) => api(path, { method: "POST", body: JSON.stringify(body) });
+    document.getElementById("assign")?.addEventListener("click", async () => { await post(`/decisions/${A.id}/assign`, { officer: getOfficer() }); await load(); window.dispatchEvent(new CustomEvent("workspace:refresh")); });
+    const ff = document.getElementById("final-form") as HTMLFormElement | null;
+    ff?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const d = new FormData(ff), msg = $("#final-msg");
+      if (!d.get("decision")) { msg.className = "error-box"; msg.textContent = "Choose approve or decline (A / D)."; msg.hidden = false; return; }
+      if (String(d.get("reason") || "").trim().length < 10) { msg.className = "error-box"; msg.textContent = "Write a reason of at least 10 characters — it is recorded."; msg.hidden = false; return; }
+      const decision = String(d.get("decision"));
+      ff.querySelectorAll("input,textarea,button").forEach((x) => ((x as HTMLInputElement).disabled = true));
+      const ms = 5000;
+      let close = () => {};
+      const timer = window.setTimeout(async () => {
+        close(); pending = null;
+        try { await post(`/decisions/${A.id}/final`, { decision, reason: d.get("reason"), officer: getOfficer() }); await load(); window.dispatchEvent(new CustomEvent("workspace:refresh")); }
+        catch (err) { msg.className = "error-box"; msg.textContent = (err as Error).message; msg.hidden = false; }
+      }, ms);
+      pending = { timer, tick: 0 };
+      close = toast(`${decision === "approve" ? "Approving" : "Declining"} ${esc(C.applicant_name || C.application_id)} — saving in 5 s`, () => {
+        clearTimeout(timer); pending = null;
+        ff.querySelectorAll("input,textarea,button").forEach((x) => ((x as HTMLInputElement).disabled = false));
+      }, ms);
+    });
+    const df = document.getElementById("disburse-form") as HTMLFormElement | null;
+    df?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      await post(`/decisions/${A.id}/disburse`, { officer: getOfficer(), note: new FormData(df).get("loan_no") });
+      await load();
+    });
+    document.getElementById("to-letter")?.addEventListener("click", () => showTab("letter"));
+    document.getElementById("print")?.addEventListener("click", () => window.print());
+    $$<HTMLInputElement>("#lang input").forEach((i) => i.addEventListener("change", () => { lang = i.value as Lang; $("#letter-wrap").innerHTML = letter(); }));
+  }
+
+  // ---- keyboard: A / D decide, Ctrl+Enter record, 1–5 tabs, J / K next / previous case, ? help ----
+  let order: string[] = [];
+  api("/inbox").then((rows) => (order = rows.map((r: any) => r.application_id))).catch(() => {});
+  function go(step: number) {
+    if (!order.length) return;
+    const i = order.indexOf(id), next = order[(i < 0 ? 0 : (i + step + order.length) % order.length)];
+    if (next && next !== id) location.href = "/app/case?id=" + encodeURIComponent(next);
+  }
+  function help() {
+    if (document.querySelector(".keys")) return document.querySelector(".keys")!.remove();
+    const el = document.createElement("div");
+    el.className = "keys";
+    el.innerHTML = `<div><h2>Keyboard shortcuts</h2><table style="margin-top:10px">${[["A", "Choose approve"], ["D", "Choose decline"], ["Ctrl + Enter", "Record the decision"],
+      ["1 – 5", "Switch tabs"], ["J / K", "Next / previous case in the inbox"], ["Ctrl + K", "Search"], ["?", "Show or hide this"]]
+      .map(([k, v]) => `<tr><td><kbd>${k}</kbd></td><td>${v}</td></tr>`).join("")}</table><p class="tiny muted" style="margin-top:10px">Press Esc to close.</p></div>`;
+    el.addEventListener("click", () => el.remove());
+    document.body.appendChild(el);
+  }
+  document.addEventListener("keydown", (e) => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement).tagName);
+    if (e.key === "Escape") document.querySelector(".keys")?.remove();
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { (document.getElementById("final-form") as HTMLFormElement | null)?.requestSubmit(); return; }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key.toLowerCase();
+    if (k === "a" || k === "d") {
+      const r = document.querySelector<HTMLInputElement>(`#final-form input[value="${k === "a" ? "approve" : "decline"}"]`);
+      if (r && !r.disabled) { r.checked = true; document.querySelector<HTMLTextAreaElement>("#final-form textarea")?.focus(); e.preventDefault(); }
+    } else if (/^[1-5]$/.test(k)) showTab(TABS[Number(k) - 1]);
+    else if (k === "j") go(1);
+    else if (k === "k") go(-1);
+    else if (e.key === "?") help();
+  });
+
+  load();
+</script>

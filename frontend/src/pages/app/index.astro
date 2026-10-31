@@ -1,0 +1,138 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+import Icon from "../../components/Icon.astro";
+---
+<AppLayout title="Decision queue" active="inbox" subtitle="Applications awaiting a credit officer's decision. Service level: a decision within 24 hours of application."
+  steps={["Referrals and the longest-waiting applications are listed first.",
+          "Select <b>Assign to me</b> to take ownership, then open the case.",
+          "Review the recommendation and its reasons on the case record, and record your decision there."]}>
+  <a slot="actions" class="btn sky" href="/apply"><Icon name="apply" size={16} /> New application</a>
+
+  <p class="inbox-line" id="inbox-line">&nbsp;</p>
+  <section class="grid cols-4" id="tiles">
+    {[0, 1, 2, 3].map(() => <div class="card kpi"><div class="skeleton" style="width:60%"></div><div class="skeleton" style="height:28px;margin-top:10px"></div></div>)}
+  </section>
+
+  <div class="card" style="margin-top:16px;padding:0">
+    <div class="card-head" style="padding:18px 20px 0"><div><h2>Waiting for a decision</h2><p id="inbox-sub">Newest first within each group.</p></div>
+      <div class="segmented" id="filter">
+        <label><input type="radio" name="f" value="all" checked /><span>All</span></label>
+        <label><input type="radio" name="f" value="mine" /><span>Assigned to me</span></label>
+        <label><input type="radio" name="f" value="free" /><span>Unassigned</span></label>
+      </div></div>
+    <div id="inbox"><div class="skeleton" style="margin:20px"></div></div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:16px">
+    <div class="card">
+      <div class="card-head"><div><h2>Running loans to call</h2><p>Red and amber early-warning checks, red first.</p></div><a class="btn ghost sm" href="/watch">Early warning →</a></div>
+      <div id="calls"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Recently decided</h2><p>The last applications officers approved or declined.</p></div><a class="btn ghost sm" href="/portfolio">Decision log →</a></div>
+      <div id="recent"></div>
+    </div>
+  </div>
+</AppLayout>
+
+<script>
+  import { $, $$, api, esc, inr, pct, BAND_COPY, ACTION_COPY } from "../../lib/api";
+  import { ago, getBranch, getOfficer, hoursSince } from "../../lib/workspace";
+
+  const caseUrl = (id: string) => "/app/case?id=" + encodeURIComponent(id);
+  const kpi = (l: string, v: string, s: string, tone = "") => `<div class="card kpi ${tone ? "t-" + tone : ""}"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${s}</div></div>`;
+  let rows: any[] = [];
+
+  function waitCell(ts: string) {
+    const h = hoursSince(ts);
+    return `<span class="wait ${h > 24 ? "red" : h > 4 ? "amber" : ""}">${ago(ts)}</span>${h > 24 ? '<div class="tiny" style="color:var(--red)">past 24 h target</div>' : ""}`;
+  }
+
+  function draw() {
+    const f = ($<HTMLInputElement>("#filter input:checked")).value, me = getOfficer();
+    const list = rows.filter((r) => f === "all" || (f === "mine" ? r.assigned?.officer === me : !r.assigned));
+    $("#inbox").innerHTML = list.length ? `<div class="table-wrap"><table>
+      <tr><th style="padding-left:20px">Applicant</th><th>GigScore advice</th><th class="num">Loan</th><th>Waiting</th><th>With</th><th></th></tr>
+      ${list.map((r) => `<tr class="row-link" data-id="${esc(r.application_id)}">
+        <td style="padding-left:20px"><b>${esc(r.applicant_name || "—")}</b>${r.synthetic ? ' <span class="badge neutral plain">demo</span>' : ""}
+          <div class="tiny muted">${esc(r.application_id)} · ${esc(r.branch || "no branch")}</div></td>
+        <td><span class="badge ${esc(r.band)}" style="text-transform:none">${esc(BAND_COPY[r.band])}</span> <span class="small muted">${r.score} · ${pct(r.pd, 0)} risk</span></td>
+        <td class="num">${inr(r.loan_amount)}</td>
+        <td>${waitCell(r.ts)}</td>
+        <td class="small">${r.assigned ? esc(r.assigned.officer) : `<button class="btn ghost sm" data-assign="${esc(r.decision_id)}">Assign to me</button>`}</td>
+        <td><a class="btn sm" href="${caseUrl(r.application_id)}">Open</a></td></tr>`).join("")}
+      </table></div>`
+      : `<div class="empty"><b>${rows.length ? "Nothing in this view" : "Inbox is clear"}</b><div class="small">${rows.length ? "Try “All”." : "New applications that need a decision will appear here."}</div></div>`;
+    $$<HTMLTableRowElement>("#inbox tr.row-link").forEach((tr) => tr.addEventListener("click", (e) => {
+      if (!(e.target as HTMLElement).closest("button,a")) location.href = caseUrl(tr.dataset.id!);
+    }));
+    $$<HTMLButtonElement>("#inbox [data-assign]").forEach((b) => b.addEventListener("click", async () => {
+      b.disabled = true;
+      await api(`/decisions/${b.dataset.assign}/assign`, { method: "POST", body: JSON.stringify({ officer: getOfficer() }) });
+      load();
+    }));
+  }
+
+  async function load() {
+    const br = getBranch(), qs = br ? "?branch=" + encodeURIComponent(br) : "";
+    const [inbox, cases, queue] = await Promise.all([api("/inbox" + qs), api("/cases" + qs), api("/collections/queue")]);
+    rows = inbox;
+    const me = getOfficer(), late = inbox.filter((r: any) => hoursSince(r.ts) > 24).length;
+    const decidedToday = cases.filter((c: any) => c.final && hoursSince(c.final.ts) < 24).length;
+    const red = queue.filter((r: any) => r.flag === "red").length;
+    $("#tiles").innerHTML = [
+      kpi("Waiting for a decision", String(inbox.length), `${inbox.filter((r: any) => r.band === "refer").length} referred by GigScore`),
+      kpi("Past the 24-hour target", String(late), late ? "decide these first" : "all within target", late ? "red" : "green"),
+      kpi("Assigned to me", String(inbox.filter((r: any) => r.assigned?.officer === me).length), esc(me), "gold"),
+      kpi("Loans to call", String(red), "red early-warning checks", red ? "red" : "green"),
+    ].join("");
+    $("#inbox-sub").textContent = `${br || "All branches"} · referrals first, then the longest waiting · J / K to move, Enter to open, A to assign`;
+    const oldest = inbox.slice().sort((a: any, b: any) => a.ts.localeCompare(b.ts))[0];
+    const hour = new Date().getHours(), hello = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+    $("#inbox-line").innerHTML = inbox.length
+      ? `${hello}, ${esc(me.split(" (")[0])}. <b>${inbox.length} application${inbox.length > 1 ? "s" : ""}</b> need a decision${late ? `, <b style="color:var(--red)">${late} past the 24-hour target</b>` : ""} — the longest waiting is <b>${esc(oldest.applicant_name || oldest.application_id)}</b> (${ago(oldest.ts)}).${red ? ` ${red} running loan${red > 1 ? "s" : ""} need a call.` : ""}`
+      : `${hello}, ${esc(me.split(" (")[0])}. Nothing is waiting for a decision.${red ? ` ${red} running loan${red > 1 ? "s" : ""} need a call.` : ""}`;
+    draw();
+
+    $("#calls").innerHTML = queue.length ? `<table>${queue.slice(0, 5).map((r: any) => `<tr>
+        <td><b>${esc(r.loan_id.length > 24 ? r.loan_id.slice(0, 8) + "…" : r.loan_id)}</b><div class="tiny muted">${r.followup ? "Last call: " + esc(r.followup.status.replaceAll("_", " ")) : "Not contacted yet"}</div></td>
+        <td><span class="badge ${esc(r.flag)}" style="text-transform:none">${r.flag === "red" ? "Call now" : "Keep an eye"}</span></td>
+        <td class="small">${esc((ACTION_COPY[r.suggested_action] || "").split(" — ")[0])}</td>
+        <td>${r.application_id ? `<a class="btn ghost sm" href="${caseUrl(r.application_id)}">Case</a>` : ""}</td></tr>`).join("")}</table>`
+      : `<div class="empty small">No loans need a call.</div>`;
+
+    const recent = cases.filter((c: any) => c.final).sort((a: any, b: any) => b.final.ts.localeCompare(a.final.ts)).slice(0, 5);
+    $("#recent").innerHTML = recent.length ? `<table>${recent.map((c: any) => `<tr class="row-link" data-id="${esc(c.application_id)}">
+        <td><b>${esc(c.applicant_name || c.application_id)}</b><div class="tiny muted">${esc(c.final.officer)} · ${ago(c.final.ts)} ago</div></td>
+        <td><span class="badge ${esc(c.final.status)}" style="text-transform:none">${c.final.status === "approve" ? "Approved" : "Declined"}</span>
+          ${c.band !== "refer" && c.band !== c.final.status ? '<span class="badge amber plain">override</span>' : ""}</td>
+        <td class="small muted">${c.disbursed ? "Disbursed · " + esc(c.disbursed.note) : ""}</td></tr>`).join("")}</table>`
+      : `<div class="empty small">No decisions yet.</div>`;
+    $$<HTMLTableRowElement>("#recent tr.row-link").forEach((tr) => tr.addEventListener("click", () => (location.href = caseUrl(tr.dataset.id!))));
+    window.dispatchEvent(new CustomEvent("workspace:refresh"));
+  }
+
+  // keyboard: J / K move, Enter opens, A assigns the highlighted application to me
+  let sel = -1;
+  const visible = () => $$<HTMLTableRowElement>("#inbox tr.row-link");
+  function highlight(i: number) {
+    const rs = visible();
+    if (!rs.length) return;
+    sel = Math.max(0, Math.min(rs.length - 1, i));
+    rs.forEach((r, k) => r.classList.toggle("kb-sel", k === sel));
+    rs[sel].scrollIntoView({ block: "nearest" });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement).tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key.toLowerCase(), rs = visible();
+    if (k === "j") highlight(sel + 1);
+    else if (k === "k") highlight(sel - 1);
+    else if (k === "enter" && rs[sel]) location.href = caseUrl(rs[sel].dataset.id!);
+    else if (k === "a" && rs[sel]) rs[sel].querySelector<HTMLButtonElement>("[data-assign]")?.click();
+  });
+
+  $$<HTMLInputElement>("#filter input").forEach((i) => i.addEventListener("change", draw));
+  window.addEventListener("workspace:context", load);
+  load().catch((e) => ($("#inbox").innerHTML = `<div class="error-box" style="margin:16px">${esc(e.message)}</div>`));
+  setInterval(draw, 60000); // keep the waiting times moving
+</script>
