@@ -1,0 +1,23 @@
+# Render blueprint for the GigScore API. In Render: New > Blueprint > pick this repository.
+# Set ADMIN_TOKEN (a long random string you keep private) and ALLOWED_ORIGINS (your Vercel URL) in the
+# Render dashboard.
+# Free plan: the SQLite decision log lives on the service's own disk and resets whenever the service
+# restarts or redeploys; the demonstration cases are recreated on every start. For a pilot, switch to
+# plan: starter and add a persistent disk so decisions are kept:
+#     disk: { name: gigscore-data, mountPath: /var/data, sizeGB: 1 }   and   DECISION_DB=/var/data/decisions.sqlite
+services:
+  - type: web
+    name: gigscore-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements-api.txt
+    # demo_seed adds the twelve SYNTHETIC demonstration cases only if they are not already present
+    startCommand: python -m src.demo_seed && uvicorn api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: ADMIN_TOKEN
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
