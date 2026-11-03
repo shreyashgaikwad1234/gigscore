@@ -43,9 +43,9 @@ import Layout from "../layouts/Layout.astro";
 <script>
   import { marked } from "marked";
   import DOMPurify from "dompurify";
-  import { $, $$, API, api, getModel, esc, pct, num } from "../lib/api";
+  import { $, $$, api, getModel, esc, pct, num, snapshot } from "../lib/api";
 
-  getModel(true).then((m) => {
+  getModel().then((m) => {
     const M = m.metrics, main = M[m.model];
     const tiles = [
       ["Production model", m.versions[m.model], `Fallback: ${m.versions[m.fallback_model]}`, true],
@@ -81,8 +81,9 @@ import Layout from "../layouts/Layout.astro";
   async function showDoc(doc: string) {
     $("#doc").innerHTML = `<div class="skeleton"></div>`;
     try {
-      const d = await api("/about/" + doc);
-      const md = d.markdown.replace(/\]\(figures\//g, `](${API}/figures/`);
+      // reports change only with a release, and the snapshot (and /figures) are regenerated with them
+      const d = await snapshot("about_" + doc).catch(() => api("/about/" + doc));
+      const md = d.markdown.replace(/\]\(figures\//g, "](/figures/");
       $("#doc").innerHTML = DOMPurify.sanitize(marked.parse(md) as string);
     } catch (e: any) { $("#doc").innerHTML = `<div class="error-box">${esc(e.message)}</div>`; }
   }

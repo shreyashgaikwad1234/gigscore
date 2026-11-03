@@ -325,7 +325,7 @@ const faqs = [
 </Layout>
 
 <script>
-  import { $, $$, api, esc, getAnalytics, getModel, num, pct, BAND_COPY } from "../lib/api";
+  import { $, $$, esc, getAnalytics, getModel, liveOr, num, pct, usedSnapshot, BAND_COPY } from "../lib/api";
   import { alpha, axisX, axisY, base, grad, hgrad, mount, palette } from "../lib/charts";
 
   // ---------- hero: the real model, animated ----------
@@ -352,8 +352,13 @@ const faqs = [
 
   async function heroLoop() {
     let r: any, w: any, m: any;
-    try { [r, w, m] = await Promise.all([api("/score/preview", { method: "POST", body: JSON.stringify(SAMPLE) }), api("/samples/slipping/check"), getModel()]); }
-    catch { return; } // API offline: the window simply stays as a static form
+    try { [r, w, m] = await Promise.all([liveOr("/score/preview", "hero_preview", { method: "POST", body: JSON.stringify(SAMPLE) }),
+      liveOr("/samples/slipping/check", "sample_slipping_check"), getModel()]); }
+    catch { return; } // neither the API nor the snapshot: the window simply stays as a static form
+    if (usedSnapshot) {
+      $("#demo .dw-live").textContent = "● Recorded run";
+      $(".demo-caption").innerHTML = `Recorded output of the production model on a sample application, shown while the demonstration API starts (about a minute). <a href="/apply?example=1">Run it yourself →</a>`;
+    }
     const cuts = m.config.bands[r.model_used];
     const v = w.weekly_inflow, early = v.slice(0, v.length - 4), late = v.slice(-4);
     const drop = Math.round((1 - late.reduce((a: number, b: number) => a + b, 0) / 4 / (early.reduce((a: number, b: number) => a + b, 0) / early.length)) * 100);

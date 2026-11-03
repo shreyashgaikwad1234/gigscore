@@ -106,16 +106,13 @@ const groups = [
     </div>
 
     <script>
-      import { api, esc } from "../lib/api";
+      import { api, esc, trackHealth } from "../lib/api";
       import { getBranch, getOfficer, setBranch, setOfficer } from "../lib/workspace";
       import { autoCountUp } from "../lib/motion";
       autoCountUp();
 
       const el = (id: string) => document.getElementById(id)!;
-      api("/health").then((h) => {
-        el("api-status").textContent = h.force_fallback ? "● Backup model" : "● Live";
-        el("api-status").className = "pill-status " + (h.force_fallback ? "warn" : "ok");
-      }).catch(() => { el("api-status").textContent = "● Offline"; el("api-status").className = "pill-status err"; });
+      trackHealth(el("api-status"), (h) => (h.force_fallback ? ["● Backup model", "warn"] : ["● Live", "ok"]), true);
 
       el("theme").addEventListener("click", () => {
         const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";

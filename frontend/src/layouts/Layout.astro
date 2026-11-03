@@ -108,17 +108,14 @@ const credits = [
     </footer>
 
     <script>
-      import { api } from "../lib/api";
+      import { trackHealth } from "../lib/api";
       import { autoCountUp } from "../lib/motion";
       autoCountUp();
       const el = document.getElementById("api-status")!;
-      api("/health")
-        .then((h) => {
-          el.textContent = h.force_fallback ? "● Fallback active" : "● Live";
-          el.title = h.force_fallback ? h.fallback_model : h.model;
-          el.className = "pill-status " + (h.force_fallback ? "warn" : "ok");
-        })
-        .catch(() => { el.textContent = "● API offline"; el.className = "pill-status err"; });
+      trackHealth(el, (h) => {
+        el.title = h.force_fallback ? h.fallback_model : h.model;
+        return h.force_fallback ? ["● Fallback active", "warn"] : ["● Live", "ok"];
+      });
 
       document.getElementById("theme")!.addEventListener("click", () => {
         const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";

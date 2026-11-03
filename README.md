@@ -251,6 +251,7 @@ into `data/raw/`, then:
 .\.venv\Scripts\python.exe -m src.train       # models/*.pkl (about 45 minutes)
 .\.venv\Scripts\python.exe -m src.evaluate    # reports, config/thresholds.yaml
 .\.venv\Scripts\python.exe -m src.analytics   # models/analytics.json
+.\.venv\Scripts\python.exe -m src.snapshot    # frontend/public/snapshot, figures (static copies for the website)
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
@@ -267,9 +268,20 @@ Both services redeploy automatically on every push to `main`.
 | API | Render (Blueprint from `render.yaml`) | `ADMIN_TOKEN` — private admin password · `ALLOWED_ORIGINS` — `https://gigscoreindia.vercel.app` |
 | Website | Vercel (root directory `frontend`) | `PUBLIC_API_URL` — `https://gigscore-api.onrender.com` |
 
-The demonstration runs on Render's free plan: the service sleeps after about 15 minutes idle (the
-first request then takes about 50 seconds), and the decision log resets on restart. For a pilot, move
-to the starter plan with a persistent disk — see the comments in `render.yaml`.
+The demonstration runs on Render's free plan, which stops the API after 15 minutes idle; waking it
+takes about a minute. Three things keep the site usable regardless:
+
+- **Static copies.** `python -m src.snapshot` writes the read-only API responses (model information,
+  validation results, governance documents, the hero example) and the report figures into
+  `frontend/public`. Public pages load these at once; `tests/test_snapshot.py` fails if they drift
+  from the API.
+- **Live with fallback.** The Overview demo uses the live model if it answers within 2.5 seconds,
+  otherwise a recorded run labelled as such. Workspace screens show a "waking up" notice with a timer.
+- **Keep-alive.** `.github/workflows/keep-api-awake.yml` pings `/health` every 10 minutes. GitHub may
+  delay scheduled runs, and one always-on free service uses about 744 of Render's 750 free hours a month.
+
+The decision log still resets when Render restarts the service. For a pilot, move to the starter plan
+with a persistent disk — see the comments in `render.yaml`.
 
 ---
 
