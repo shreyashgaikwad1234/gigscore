@@ -1,0 +1,244 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { HEADLINES, SRC } from "../lib/evidence";
+const src = (k: keyof typeof SRC) => SRC[k];
+// What each finding means for the product, and how far GigScore's own evidence goes today.
+const mapping = [
+  ["Lenders are cutting back on applicants without a score", "Application decisioning ranks no-score applicants on data already captured at origination",
+    "On the 2018 L&T loans, the bureau score ranked no-score applicants no better than chance; GigScore did", "Back-test on the lender's 2025–26 originations (pilot stage 1)"],
+  ["Bank-statement data separates two-wheeler risk", "Early-warning monitor reads a consented statement after disbursal; EMI-date alignment for irregular earners",
+    "Rules demonstrated on synthetic statements", "Shadow run on consented Account Aggregator data (pilot stage 2)"],
+  ["Risk concentrates in ₹75,000–1 lakh loans", "Loan-to-price and loan-size reasons on every recommendation; cut-offs set by the lender",
+    "Loan-to-price is a top driver in the 2018 validation", "Recalibrate cut-offs to the lender's current ticket mix"],
+  ["Gig incomes are irregular, not absent", "Weekly-inflow monitoring and restructuring offers before an EMI is missed",
+    "Synthetic gig-income profiles in the demonstration", "Measure flags against actual EMI outcomes"],
+];
+const cases = [
+  ["True Balance", "Small loans to thin-file borrowers in Tier 2 and 3 India, about 3 lakh new-to-credit applicants a month.",
+    "Approval rate more than doubled and 90+ day arrears halved after adding Account Aggregator data to its scoring. The riskiest tenth of borrowers defaulted about 15 times as often as the safest."],
+  ["InPrime Finserv", "₹50,000–3 lakh loans to informal businesses with no payslip, ITR or GST record.",
+    "98.5% of EMI bounces came from a low balance on the debit day. It now checks the balance before each debit and sets the EMI date to when the balance peaks; bounces fell from 19% to 12% as the book tripled, with gross NPA at 0.70%."],
+  ["Narendra Finance", "Loans to blue-collar and industrial workers with steady cash flows but thin credit files.",
+    "60–65% of monthly borrowers are new to credit and about 95% of lending runs through Account Aggregator; 82% say it was their first formal credit."],
+];
+---
+<Layout title="The case for GigScore in 2026" active="evidence"
+  photo="rider-rain" photoAlt="A delivery rider on a two-wheeler in the rain"
+  subtitle="What credit bureau and government data published between January and October 2026 show about two-wheeler lending, new-to-credit borrowers and gig workers — and how each finding maps to GigScore."
+  steps={["Each section states a finding, the chart behind it, and the source report with its date.",
+          "The last section maps every finding to a GigScore module, and separates what is already shown from what a pilot must prove.",
+          "All figures are third-party market data. GigScore's own model results are on the <a href='/analytics'>Validation</a> page."]}
+  next={{ title: "From market evidence to your own book", text: "The pilot programme re-runs GigScore on your 2025–26 originations before it influences a single decision.",
+          href: "/pilot", cta: "See the pilot programme", alt: ["/analytics", "Review the model validation"] }}>
+
+  <section class="mkt-cards reveal" style="margin-top:8px">
+    {HEADLINES.map(([v, t, k]) => (
+      <div><b>{v}</b><p>{t}</p><a href={src(k).href} target="_blank" rel="noopener">{src(k).short} ↗</a></div>
+    ))}
+  </section>
+
+  <!-- 1 -->
+  <section class="card section reveal">
+    <div class="card-head"><div><span class="ev-num">1</span><h2>Two-wheeler loans are how riders enter formal credit</h2>
+      <p>Share of loans taken in the past 12 months by borrowers who had never held that type of loan.</p></div></div>
+    <div class="split" style="gap:28px;align-items:center">
+      <div id="c-ntp" class="chart"></div>
+      <div>
+        <div class="ev-facts">
+          <div><b>₹1.89 lakh crore</b><span>outstanding in June 2026, up 12.4% in a year, across 3.78 crore active loans</span></div>
+          <div><b>53%</b><span>of two-wheeler lending by value is beyond India's top 100 cities — the highest of any retail loan</span></div>
+          <div><b>70.6%</b><span>of two-wheeler originations by value come from NBFCs</span></div>
+          <div><b>₹94,967</b><span>average ticket in April–June 2026, still rising</span></div>
+        </div>
+        <div class="plain">For most two-wheeler borrowers there is no earlier vehicle loan to learn from. Lenders that can assess
+          first-time borrowers well reach the largest pool of new customers in retail credit.</div>
+      </div>
+    </div>
+    <p class="ev-src">Sources: <a href={src("wheels").href} target="_blank" rel="noopener">{src("wheels").name} ↗</a> · <a href={src("hil").href} target="_blank" rel="noopener">{src("hil").name} ↗</a></p>
+  </section>
+
+  <!-- 2 -->
+  <section class="card section reveal">
+    <div class="card-head"><div><span class="ev-num">2</span><h2>Lenders are retreating to borrowers with a score</h2>
+      <p>Share of all new retail loans in each quarter, by the borrower's bureau position.</p></div></div>
+    <div class="split" style="gap:28px;align-items:center">
+      <div id="c-tier" class="chart"></div>
+      <div>
+        <div class="ev-facts">
+          <div><b>22% → 16%</b><span>new-to-credit share of new loans, October–December 2023 to 2025</span></div>
+          <div><b>57%</b><span>of new loans now go to prime or better borrowers</span></div>
+          <div><b>+1.4%</b><span>two-wheeler originations grew quarter on quarter in April–June 2026, against +7.5% a year earlier</span></div>
+          <div><b>−1.4%</b><span>quarterly change in Maharashtra's two-wheeler book; Madhya Pradesh, Rajasthan and Gujarat also shrank</span></div>
+        </div>
+        <div class="plain gold">Lenders have controlled risk by approving fewer applicants they cannot score. That protects the book,
+          but it turns away the borrowers two-wheeler lending depends on — the gap a better assessment of no-score applicants closes.</div>
+      </div>
+    </div>
+    <p class="ev-src">Sources: <a href={src("cmi").href} target="_blank" rel="noopener">{src("cmi").name} ↗</a> · <a href={src("hil").href} target="_blank" rel="noopener">{src("hil").name} ↗</a></p>
+  </section>
+
+  <!-- 3 -->
+  <section class="grid cols-2 section reveal">
+    <div class="card">
+      <div class="card-head"><div><span class="ev-num">3</span><h2>Arrears fell as lending tightened</h2>
+        <p>Two-wheeler portfolio overdue, % of balances.</p></div></div>
+      <div id="c-par" class="chart"></div>
+      <div class="plain">CRIF attributes the improvement largely to lenders recalibrating their portfolios. Two-wheeler loans still carry the
+        highest 91–180 day arrears of any vehicle loan, and the oldest arrears (360+ days) rose to <b>6.3%</b> in June 2026 from 5.8% a year earlier.</div>
+      <p class="ev-src"><a href={src("wheels").href} target="_blank" rel="noopener">{src("wheels").short} ↗</a> · <a href={src("hil").href} target="_blank" rel="noopener">{src("hil").short} ↗</a></p>
+    </div>
+    <div class="card">
+      <div class="card-head"><div><h2>Risk concentrates in ₹75,000–1 lakh loans</h2>
+        <p>31–90 days overdue by ticket size, June 2025 and June 2026.</p></div></div>
+      <div id="c-ticket" class="chart"></div>
+      <div class="plain gold">The ₹75,000–1 lakh band is about 40% of two-wheeler lending by value and has the highest early arrears, 3.61% in June 2026.
+        It is the price band of most commuter scooters and motorcycles.</div>
+      <p class="ev-src"><a href={src("hil").href} target="_blank" rel="noopener">{src("hil").short} ↗</a></p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section class="card section reveal">
+    <div class="card-head"><div><span class="ev-num">4</span><h2>The borrowers: a growing workforce with irregular income</h2>
+      <p>Gig and platform workers in India, crore people.</p></div></div>
+    <div class="split" style="gap:28px;align-items:center">
+      <div id="c-gig" class="chart"></div>
+      <div>
+        <div class="ev-facts">
+          <div><b>40%</b><span>of gig workers earn under ₹15,000 a month; the Survey notes that income volatility limits their access to credit</span></div>
+          <div><b>1 in 3</b><span>delivery riders who borrowed had missed at least one repayment</span></div>
+          <div><b>99%</b><span>of delivery riders hold a bank account — their income is visible in a statement</span></div>
+          <div><b>15.1%</b><span>of Indian adults borrowed from a formal lender in the past year, although 89% hold an account</span></div>
+        </div>
+        <div class="plain">The problem is timing, not absence of income: earnings arrive weekly and vary. A statement shows that pattern; a bureau file does not.</div>
+      </div>
+    </div>
+    <p class="ev-src">Sources: <a href={src("survey").href} target="_blank" rel="noopener">{src("survey").name} ↗</a> · <a href={src("niti").href} target="_blank" rel="noopener">{src("niti").name} ↗</a> · <a href={src("idinsight").href} target="_blank" rel="noopener">{src("idinsight").name} ↗</a> · <a href={src("findex").href} target="_blank" rel="noopener">{src("findex").name} ↗</a></p>
+  </section>
+
+  <!-- 5 -->
+  <section class="card section reveal">
+    <div class="card-head"><div><span class="ev-num">5</span><h2>Bank-statement data separates two-wheeler risk</h2>
+      <p>Loans 90+ days overdue in June 2026: loans underwritten with consented Account Aggregator data, against loans without it.</p></div></div>
+    <div class="split" style="gap:28px;align-items:center">
+      <div id="c-aa" class="chart"></div>
+      <div>
+        <div class="ev-facts">
+          <div><b>0.5% vs 5.3%</b><span>two-wheeler loans 90+ days overdue, with and without Account Aggregator data — the largest gap of any product</span></div>
+          <div><b>3.82×</b><span>growth in two-wheeler lending value through Account Aggregator in a year, against 0.32× without it</span></div>
+          <div><b>₹3.82 lakh crore</b><span>lent with Account Aggregator data in FY26, across 3.68 crore loans</span></div>
+          <div><b>500 million</b><span>consents fulfilled and 310 million+ accounts linked; 8.4% of retail and MSME lending by value</span></div>
+        </div>
+        <div class="plain mint">This is the mechanism GigScore's monitoring is built on: read the borrower's own statement, with consent, instead of relying on a bureau file
+          that new-to-credit riders do not have. <b>Note:</b> the report compares loan groups; it does not prove the data caused the difference, since lenders and borrowers
+          using Account Aggregator may differ. Used-car loans go the other way (2.4% vs 1.7%), and the chart shows that too.</div>
+      </div>
+    </div>
+    <p class="ev-src">Sources: <a href={src("aa").href} target="_blank" rel="noopener">{src("aa").name} ↗</a> · <a href={src("sahamati").href} target="_blank" rel="noopener">{src("sahamati").name} ↗</a></p>
+  </section>
+
+  <!-- 6 -->
+  <section class="card section reveal">
+    <div class="card-head"><div><span class="ev-num">6</span><h2>Lenders already using cash-flow data</h2>
+      <p>Results reported by the lenders themselves in the October 2026 Account Aggregator Impact Report.</p></div></div>
+    <div class="data-note" style="margin-top:0">
+      {cases.map(([n, who, res]) => <div><h3>{n}</h3><p class="small muted" style="margin-bottom:8px">{who}</p><p>{res}</p></div>)}
+    </div>
+    <div class="plain">InPrime's finding mirrors GigScore's early-warning design: most missed EMIs are a <b>cash-timing</b> problem on the debit day, so the intervention is a
+      reminder, a date shift or a restructuring offer before the EMI falls due — not a collections call after it is missed.</div>
+    <p class="ev-src">Source: <a href={src("aa").href} target="_blank" rel="noopener">{src("aa").name} ↗</a> (real-world use cases section)</p>
+  </section>
+
+  <!-- MAPPING -->
+  <section class="card section reveal" id="mapping">
+    <div class="card-head"><div><h2>What the evidence means for GigScore</h2>
+      <p>Each finding, the module that addresses it, what GigScore has already shown, and what a pilot must prove on current data.</p></div></div>
+    <div style="overflow-x:auto">
+      <table class="ev-table">
+        <tr><th>Finding (2026)</th><th>GigScore module</th><th>Shown so far</th><th>Still to prove</th></tr>
+        {mapping.map(([f, m, s, p]) => <tr><td><b>{f}</b></td><td>{m}</td><td class="muted">{s}</td><td>{p}</td></tr>)}
+      </table>
+    </div>
+    <div class="plain gold"><b>What is not claimed.</b> GigScore's model was trained and validated on 2018 L&amp;T loans, the only public loan-level record of Indian
+      two-wheeler repayment. The figures on this page show that the problem is current and that cash-flow assessment works in today's market; they are not
+      GigScore results. Delinquency levels, ticket sizes and the borrower mix have changed since 2018, so the model is retrained and recalibrated on each
+      lender's recent book before any live use.</div>
+  </section>
+</Layout>
+
+<script>
+  import { alpha, axisX, axisY, base, mount, palette } from "../lib/charts";
+  import { CHARTS as C } from "../lib/evidence";
+  const p1 = (v: number) => v.toFixed(1) + "%";
+
+  mount(document.getElementById("c-ntp"), () => {
+    const c = palette();
+    return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => p1(v) } }),
+      xAxis: axisX({ type: "category", data: C.ntp.labels, axisLabel: { color: c.muted, fontSize: 11 } }),
+      yAxis: axisY({ type: "value", min: 0, max: 100, axisLabel: { color: c.muted, formatter: "{value}%" } }),
+      series: [
+        { type: "bar", name: "June 2025", data: C.ntp.jun25, itemStyle: { color: alpha(c.sky, 0.35), borderRadius: [5, 5, 0, 0] }, barGap: "8%" },
+        { type: "bar", name: "June 2026", data: C.ntp.jun26.map((v, i) => ({ value: v, itemStyle: { color: i === 0 ? c.orange : c.sky, borderRadius: [5, 5, 0, 0] } })),
+          label: { show: true, position: "top", color: c.text2, fontSize: 11, fontWeight: 700, formatter: (p: any) => p1(p.value) } },
+      ] };
+  });
+
+  mount(document.getElementById("c-tier"), () => {
+    const c = palette();
+    const s = (name: string, data: number[], color: string) => ({ type: "bar", stack: "t", name, data, barWidth: "46%", itemStyle: { color },
+      label: { show: true, color: "#fff", fontWeight: 700, fontSize: 11, formatter: "{c}%" } });
+    return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => v + "% of new loans" } }),
+      xAxis: axisX({ type: "category", data: C.tier.labels }),
+      yAxis: axisY({ type: "value", max: 100, axisLabel: { color: c.muted, formatter: "{value}%" } }),
+      series: [s("Below prime", C.tier.belowPrime, alpha(c.sky, 0.45)), s("Prime and above", C.tier.primePlus, c.sky), s("New to credit (no score)", C.tier.ntc, c.orange)] };
+  });
+
+  mount(document.getElementById("c-par"), () => {
+    const c = palette();
+    const line = (name: string, data: number[], color: string) => ({ type: "line", name, data, smooth: false, symbolSize: 9, lineStyle: { width: 3, color }, itemStyle: { color },
+      label: { show: true, position: "top", color, fontWeight: 700, fontSize: 11, formatter: (p: any) => p1(p.value) } });
+    return { ...base({ tooltip: { trigger: "axis", valueFormatter: (v: number) => p1(v) } }),
+      xAxis: axisX({ type: "category", data: C.par.labels, boundaryGap: true }),
+      yAxis: axisY({ type: "value", min: 0, max: 5, axisLabel: { color: c.muted, formatter: "{value}%" } }),
+      series: [line("31–90 days overdue", C.par.p31_90, c.orange), line("91–180 days overdue", C.par.p91_180, c.rose)] };
+  });
+
+  mount(document.getElementById("c-ticket"), () => {
+    const c = palette();
+    return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" },
+        formatter: (ps: any[]) => `<b>${ps[0].name}</b> · ${C.ticket.valueShare[ps[0].dataIndex]}% of lending value<br/>` + ps.map((p) => `${p.marker}${p.seriesName}: ${p.value.toFixed(2)}%`).join("<br/>") } }),
+      xAxis: axisX({ type: "category", data: C.ticket.labels }),
+      yAxis: axisY({ type: "value", min: 0, axisLabel: { color: c.muted, formatter: "{value}%" } }),
+      series: [
+        { type: "bar", name: "June 2025", data: C.ticket.jun25, itemStyle: { color: alpha(c.sky, 0.35), borderRadius: [5, 5, 0, 0] } },
+        { type: "bar", name: "June 2026", data: C.ticket.jun26.map((v, i) => ({ value: v, itemStyle: { color: i === 1 ? c.orange : c.sky, borderRadius: [5, 5, 0, 0] } })),
+          label: { show: true, position: "top", color: c.text2, fontSize: 11, fontWeight: 700, formatter: (p: any) => p.value.toFixed(2) + "%" } },
+      ] };
+  });
+
+  mount(document.getElementById("c-gig"), () => {
+    const c = palette();
+    return { ...base({ legend: { show: false }, tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => v + " crore" } }),
+      grid: { left: 8, right: 14, top: 30, bottom: 30, containLabel: true },
+      xAxis: axisX({ type: "category", data: C.gig.labels }),
+      yAxis: axisY({ type: "value", axisLabel: { color: c.muted, formatter: "{value} Cr" } }),
+      series: [{ type: "bar", name: "Gig and platform workers", barWidth: "46%",
+        data: C.gig.v.map((v, i) => ({ value: v, itemStyle: { borderRadius: [6, 6, 0, 0], color: i === 2 ? alpha(c.orange, 0.3) : c.orange,
+          borderColor: c.orange, borderWidth: i === 2 ? 2 : 0, borderType: "dashed" } })),
+        label: { show: true, position: "top", color: c.text2, fontWeight: 700, formatter: (p: any) => (p.value < 1 ? Math.round(p.value * 100) + " lakh" : p.value + " crore") } }] };
+  });
+
+  mount(document.getElementById("c-aa"), () => {
+    const c = palette();
+    return { ...base({ tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v: number) => p1(v) + " 90+ days overdue" } }),
+      grid: { left: 8, right: 40, top: 40, bottom: 10, containLabel: true },
+      xAxis: axisX({ type: "value", axisLabel: { color: c.muted, formatter: "{value}%" } }),
+      yAxis: axisY({ type: "category", inverse: true, data: C.aa.labels, axisLabel: { color: c.text2, fontSize: 12, fontWeight: 600 } }),
+      series: [
+        { type: "bar", name: "Without Account Aggregator data", data: C.aa.without, barWidth: 14, itemStyle: { color: c.rose, borderRadius: 4 },
+          label: { show: true, position: "right", color: c.text2, fontSize: 11, formatter: (p: any) => p1(p.value) } },
+        { type: "bar", name: "With Account Aggregator data", data: C.aa.with, barWidth: 14, itemStyle: { color: c.mint, borderRadius: 4 },
+          label: { show: true, position: "right", color: c.text2, fontSize: 11, fontWeight: 700, formatter: (p: any) => p1(p.value) } },
+      ] };
+  });
+</script>

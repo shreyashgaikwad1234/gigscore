@@ -35,23 +35,27 @@ switch.
 
 ---
 
-## 🌏 The Market Today (2024–25)
+## 🌏 The Case in 2026
 
-The L&T loans date from 2018. Public sources show the problem GigScore addresses has grown since:
+The model was built on 2018 loans. Bureau and government data published in 2026 show that the problem
+GigScore addresses is current, and that the method it relies on (consented bank-statement data) works:
 
-| Indicator | Value | Source |
+| Finding | Value | Source |
 |:--|--:|:--|
-| Indian adults with an account | **89%** | World Bank, Global Findex 2025 (survey year 2024) |
-| … who borrowed from a formal lender in the past year | **15.1%** | Global Findex 2025 (63.3% borrowed in some form) |
-| Two-wheeler loans outstanding, Sept 2024 | **₹1.49 lakh crore** (+26.3% in a year) | CRIF High Mark, CreditScape: Two-Wheeler Loans |
-| Two-wheeler balances 31–180 days past due, Sept 2024 | **5.8%** — highest in six quarters | CRIF High Mark, CreditScape: Two-Wheeler Loans |
-| Ticket size with the highest early delinquency | **₹75,000 – 1 lakh** | CRIF High Mark, CreditScape: Two-Wheeler Loans |
-| Delivery riders who borrowed and missed at least one repayment | **about 1 in 3** | IDinsight, survey of 2,547 platform delivery riders, 2024 |
-| Delivery riders with a bank account | **99%** | IDinsight, 2024 |
+| Two-wheeler loans outstanding, June 2026 | **₹1.89 lakh crore** (+12.4% in a year), 3.78 crore active loans | CRIF High Mark, *How India Lends*, Sept 2026 |
+| Two-wheeler loans going to borrowers new to the product | **80.5%** — the highest of any vehicle loan | CRIF High Mark, *Wheels & Ambition*, Aug 2026 |
+| New retail loans going to new-to-credit borrowers | **22% → 16%** (Oct–Dec 2023 to 2025) | TransUnion CIBIL, *Credit Market Indicator*, Mar 2026 |
+| Two-wheeler balances 31–180 days past due | **5.8% → 4.0%** (June 2025 to 2026), as lenders tightened | CRIF High Mark, Sept 2026 |
+| Early arrears on ₹75,000–1 lakh loans (≈40% of lending value) | **3.61%** PAR 31–90 — the highest ticket band | CRIF High Mark, Sept 2026 |
+| Two-wheeler loans 90+ days overdue, with vs without Account Aggregator data | **0.5% vs 5.3%** (June 2026) | CRIF High Mark & Sahamati, *AA Impact Report*, Oct 2026 |
+| Gig and platform workers | **1.2 crore** in FY25 (77 lakh in FY21); ~40% earn under ₹15,000/month | Economic Survey 2025-26; NITI Aayog 2022 |
+| Delivery riders who borrowed and missed a repayment | **about 1 in 3**; 99% hold a bank account | IDinsight, 2,547 riders, 2024 |
 
-Most riders now have a bank account, which makes consent-based statement monitoring practical. Formal credit
-still reaches few of them, and early delinquency in two-wheeler lending is rising. These figures appear on
-the website's Overview page with links to each source.
+Lenders have cut two-wheeler arrears by approving fewer applicants without a score, the borrowers
+two-wheeler lending depends on. GigScore's two modules answer this: scoring no-score applicants on
+origination data, and monitoring repayment capacity from the borrower's own statement. The website's
+**Market evidence** page (`/evidence`) charts all six findings with links to each report. The **0.5% vs 5.3%**
+figure compares loan groups and does not by itself prove causation.
 
 ---
 
@@ -274,7 +278,7 @@ to the starter plan with a persistent disk — see the comments in `render.yaml`
 | Data | Used for | Status |
 |:--|:--|:--|
 | L&T Vehicle Loan Default (233,154 loans, Aug–Oct 2018, plus 112,392 unlabelled Nov 2018 loans) | Model development and validation | Released for a public L&T Financial Services / Analytics Vidhya hackathon; the Kaggle copy states no licence. Not redistributed in this repository. |
-| CRIF High Mark, World Bank Global Findex 2025, IDinsight 2024 | Market context only | Published figures, quoted with attribution. Not used to train the model. |
+| CRIF High Mark (2026), TransUnion CIBIL (2026), CRIF–Sahamati AA Impact Report (2026), Economic Survey 2025-26, NITI Aayog, World Bank Findex 2025, IDinsight 2024 | Market evidence only | Published figures, quoted with attribution; charts redraw a few data points. Not used to train the model. |
 | Demonstration applicants, officers and bank statements | The website and workspace demo | Synthetic, created for this project. |
 
 **Reviewed and not used:** Home Credit's "Credit Risk Model Stability" dataset (Kaggle, 2024) is licensed
@@ -286,9 +290,9 @@ recalibrates the model on the lender's own recent originations before it influen
 
 ## ⚠️ Limitations
 
-- The data is from one lender in 2018; default levels and ticket sizes are dated (two-wheeler
-  delinquency has risen since — see *The Market Today*). A lender must retrain and re-validate on its
-  own book before use.
+- The data is from one lender in 2018; default levels and ticket sizes are dated (the average new
+  two-wheeler loan was ₹94,967 in April–June 2026 — see *The Case in 2026*). A lender must retrain and
+  re-validate on its own book before use.
 - October's default rate (23.5%) was above the training window's (20.4%), so raw predictions run low
   until the monthly recalibration offset is applied.
 - The model uses the day of the month the loan is disbursed, so the same application can score

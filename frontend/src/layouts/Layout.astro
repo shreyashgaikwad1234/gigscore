@@ -11,6 +11,7 @@ const { title, active, subtitle, eyebrow, eyebrowTone = "", bare = false, photo,
 // The public site; the day-to-day screens live in the workspace (/app, layouts/AppLayout.astro).
 const nav = [
   { href: "/", key: "home", label: "Overview" },
+  { href: "/evidence", key: "evidence", label: "Market evidence" },
   { href: "/analytics", key: "analytics", label: "Validation" },
   { href: "/about", key: "about", label: "Governance" },
   { href: "/pilot", key: "pilot", label: "Pilot programme" },
@@ -93,11 +94,12 @@ const credits = [
     </main>
     <footer class="site">
       <nav class="foot-nav">
-        <a href="/">Overview</a><a href="/analytics">Validation</a><a href="/about">Governance</a><a href="/pilot">Pilot programme</a>
+        <a href="/">Overview</a><a href="/evidence">Market evidence</a><a href="/analytics">Validation</a><a href="/about">Governance</a><a href="/pilot">Pilot programme</a>
         <a href="/app">Demonstration workspace</a><a href="/apply?example=1">Score a sample application</a>
       </nav>
       <div>
-        <b>GigScore</b> — credit decisioning for two-wheeler lending. Developed and validated on 233,154 L&amp;T two-wheeler loans (2018).
+        <b>GigScore</b> — credit decisioning for two-wheeler lending. Developed and validated on 233,154 L&amp;T two-wheeler loans (2018);
+        market figures are from CRIF High Mark, TransUnion CIBIL, Sahamati and Government of India publications of 2026, as cited.
         Recommendations support, and do not replace, the credit officer's decision. Bank-statement examples in the demonstration are synthetic.
       </div>
       <div class="credits">Photos from Unsplash by {credits.map(([n, u], i) => (

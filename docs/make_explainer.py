@@ -492,19 +492,24 @@ def build(F: dict):
                 f"employment type, existing loans if any — and ranks the same no-score applicants with an AUC of "
                 f"<b>{M[main]['no_score']['auc']:.3f}</b>. That ranking is what lets a lender approve the safer ones "
                 "instead of declining everybody."),
-              P("<b>The market today.</b> The L&amp;T loans are from 2018. Published sources show that the gap has widened "
-                "since: most adults and riders now hold a bank account, few borrow formally, and early delinquency in "
-                "two-wheeler lending is rising. These figures are quoted from their sources; none is used to train the model.")]
+              P("<b>The case in 2026.</b> The L&amp;T loans are from 2018. Bureau and government data published in 2026 "
+                "show that the problem is current: two-wheeler loans are how most riders enter formal credit, lenders "
+                "have cut arrears by approving fewer applicants without a score, and loans underwritten with consented "
+                "bank-statement (Account Aggregator) data perform far better. These figures are quoted from their "
+                "sources; none is used to train the model. The website's Market evidence page charts them.")]
     story.append(table([
-        ["Indicator", "Value", "Source"],
-        ["Indian adults with an account", "89%", "World Bank, Global Findex 2025 (survey 2024)"],
-        ["... who borrowed from a formal lender in the past year", "15.1%", "Global Findex 2025 (63.3% borrowed in any form)"],
-        ["Two-wheeler loans outstanding, Sept 2024", f"{RUPEE}1.49 lakh crore", "CRIF High Mark, CreditScape: Two-Wheeler Loans"],
-        ["Two-wheeler balances 31–180 days past due, Sept 2024", "5.8%", "CRIF High Mark; highest in six quarters"],
-        ["Ticket size with the highest early delinquency", f"{RUPEE}75,000 – 1 lakh", "CRIF High Mark"],
-        ["Delivery riders who borrowed and missed a repayment", "about 1 in 3", "IDinsight, 2,547 riders surveyed, 2024"],
-        ["Delivery riders with a bank account", "99%", "IDinsight, 2024"],
+        ["Finding", "Value", "Source"],
+        ["Two-wheeler loans outstanding, June 2026", f"{RUPEE}1.89 lakh crore", "CRIF High Mark, How India Lends, Sept 2026"],
+        ["Two-wheeler loans to borrowers new to the product", "80.5%", "CRIF High Mark, Wheels & Ambition, Aug 2026"],
+        ["New retail loans to new-to-credit borrowers, Oct–Dec 2023 → 2025", "22% → 16%", "TransUnion CIBIL, CMI, Mar 2026"],
+        ["Two-wheeler balances 31–180 days past due, Jun 2025 → 2026", "5.8% → 4.0%", "CRIF High Mark, Sept 2026"],
+        [f"Early arrears (PAR 31–90), {RUPEE}75,000–1 lakh loans", "3.61%", "CRIF High Mark; highest ticket band"],
+        ["Two-wheeler 90+ overdue, with vs without AA data", "0.5% vs 5.3%", "CRIF High Mark & Sahamati, Oct 2026"],
+        ["Gig and platform workers, FY25", "1.2 crore", "Economic Survey 2025-26 (77 lakh in FY21)"],
+        ["Delivery riders who borrowed and missed a repayment", "about 1 in 3", "IDinsight, 2,547 riders, 2024"],
     ], [72 * mm, 33 * mm, 65 * mm], align_right=(1,)))
+    story.append(P("The 0.5% vs 5.3% comparison is between loan groups; lenders and borrowers using Account Aggregator may "
+                   "differ, so it shows association, not proof that the data caused the difference."))
 
     # ----- 3 -----
     story += H1("3. The data")
@@ -546,8 +551,8 @@ def build(F: dict):
               P("<b>Alternatives reviewed.</b> No public dataset combines Indian borrowers, recent originations and "
                 "repayment outcomes, because Indian lenders cannot publish borrower-level data. Home Credit's 2024 "
                 "'Credit Risk Model Stability' dataset is newer and deeper, but its rules restrict it to competition use, "
-                "so it was not used. Bureau reports (CRIF High Mark) and surveys (Global Findex, IDinsight) supply current "
-                "aggregates for context only. The practical answer is the pilot: the model is retrained and recalibrated "
+                "so it was not used. Bureau reports (CRIF High Mark, TransUnion CIBIL), the Account Aggregator Impact Report "
+                "and government sources (Economic Survey, NITI Aayog) supply current aggregates as evidence only. The practical answer is the pilot: the model is retrained and recalibrated "
                 "on the lender's own recent originations before it influences any decision.")]
     story.append(callout("<b>Honesty rule.</b> Cleaning, feature screening, tuning, calibration and the decision cut-offs "
                          "use August–September only; October 2018 is the test month. One choice did look at October: the "
@@ -917,8 +922,8 @@ def build(F: dict):
     # ----- 14 -----
     story += H1("14. Limits, and what it takes to use it for real")
     story += bullets([
-        "<b>The data is from 2018 and one lender.</b> Default levels and loan sizes are dated: CRIF High Mark reports "
-        "two-wheeler balances 31–180 days past due at 5.8% in September 2024, the highest in six quarters. Before real use "
+        "<b>The data is from 2018 and one lender.</b> Default levels and loan sizes are dated: in June 2026 CRIF High Mark "
+        f"reports two-wheeler balances 31–180 days past due at 4.0% and an average new loan of about {RUPEE}95,000. Before real use "
         "the pipeline must be retrained on the deploying lender's own loans — a configuration change, not a rewrite.",
         "<b>The borrowers are 'gig-like', not confirmed gig workers:</b> self-employed two-wheeler buyers. The planned Pune "
         "rider survey and consented rider statements are what would connect the model to actual riders. The survey file in "

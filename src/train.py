@@ -314,9 +314,13 @@ def model_card_md(res, calib, info, saved, fl, win, oot) -> str:
         f"- L&T Vehicle Loan Default (Kaggle `mamtadhaker/lt-vehicle-loan-default-prediction`), real Indian NBFC loans.",
         "- Provenance and licence: released for a public L&T Financial Services / Analytics Vidhya hackathon; the "
         "Kaggle copy states no licence. The raw data is not redistributed with GigScore.",
-        "- Currency: the loans date from 2018. Market delinquency has since risen (CRIF High Mark: two-wheeler "
-        "PAR 31–180 of 5.8% in Sept 2024), so the model must be retrained and recalibrated on the lender's own "
-        "recent originations before live use.",
+        "- Currency: the loans date from 2018. The market has moved since (CRIF High Mark, June 2026: two-wheeler "
+        "PAR 31–180 of 4.0%, average new loan about ₹95,000; TransUnion CIBIL: new-to-credit share of new loans "
+        "down to 16%), so the model must be retrained and recalibrated on the lender's own recent originations "
+        "before live use.",
+        "- Supporting evidence for the method (not model data): two-wheeler loans underwritten with consented "
+        "Account Aggregator data were 0.5% 90+ days overdue in June 2026, against 5.3% without it (CRIF High Mark "
+        "and Sahamati, October 2026; a comparison of loan groups, not a causal estimate).",
         "- Alternatives reviewed and not used: Home Credit 'Credit Risk Model Stability' (2024) is licensed for "
         "competition use only; no public dataset combines Indian borrowers, recent originations and repayment outcomes.",
         f"- Training window: {window(win)} ({len(win):,} loans); tuning, tree counts and calibration by 5-fold CV "

@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Icon from "../components/Icon.astro";
+import { HEADLINES, SRC, STRIP } from "../lib/evidence";
 const teams = [
   ["apply", "Credit operations", "A recommendation with its three principal reasons in under a second. Referrals are routed to an officer's queue with a 24-hour service level.", "/app", "Open the decision queue"],
   ["watch", "Collections", "Consent-based statement monitoring identifies deteriorating repayment capacity before the next EMI falls due, with a recommended intervention.", "/watch", "Open the early-warning monitor"],
@@ -19,19 +20,8 @@ const challenges = [
   ["slow", "Turnaround time is slowing disbursals."],
   ["explain", "Decline reasons are hard to communicate and document."],
 ];
-// Current market evidence. Every figure is quoted from the named public source; none comes from GigScore's own data.
-const market = [
-  ["15.1%", "of Indian adults borrowed from a formal lender in the past year, although 89% hold an account and 63.3% borrowed in some form.",
-    "World Bank, Global Findex 2025 (survey year 2024)", "https://www.worldbank.org/en/publication/globalfindex"],
-  ["₹1.49 lakh crore", "in two-wheeler loans outstanding in September 2024, 26.3% higher than a year earlier.",
-    "CRIF High Mark, CreditScape: Two-Wheeler Loans, Sept 2024", "https://crifhighmark.com/media/4153/crif-report_creditscape-two-wheeler-loans-sep24.pdf"],
-  ["5.8%", "of two-wheeler balances were 31–180 days past due in September 2024, the highest in six quarters. Early delinquency is highest on ₹75,000–1 lakh loans.",
-    "CRIF High Mark, CreditScape: Two-Wheeler Loans, Sept 2024", "https://crifhighmark.com/media/4153/crif-report_creditscape-two-wheeler-loans-sep24.pdf"],
-  ["1 in 3", "delivery riders who borrowed had missed at least one repayment. 99% hold a bank account; average take-home pay is about ₹115 an hour.",
-    "IDinsight, survey of 2,547 platform delivery riders, 2024", "https://www.idinsight.org/publication/economic-lives-of-digital-platform-gig-workers-india/"],
-];
 const faqs = [
-  ["The validation data is from 2018. Is it still relevant?", "The L&T loans are the only public, loan-level record of Indian two-wheeler repayment, so they are used to show that the method rank-orders risk on real outcomes. Delinquency levels have moved since: CRIF High Mark reports 5.8% of two-wheeler balances 31–180 days past due in September 2024. That is why the model is retrained and recalibrated on your own recent originations in the first stage of the pilot, before it influences any decision."],
+  ["The model was validated on 2018 loans. Why should a lender trust it in 2026?", "Two kinds of evidence answer different questions. The 2018 L&T loans — the only public loan-level record of Indian two-wheeler repayment — show that the method rank-orders real repayment outcomes, including for applicants with no bureau score. 2026 bureau data shows the problem is current: new-to-credit borrowers received 16% of new loans in late 2025, down from 22% in 2023 (TransUnion CIBIL), and two-wheeler loans underwritten with consented bank-statement data were 0.5% 90+ days overdue in June 2026 against 5.3% without it (CRIF High Mark and Sahamati). Delinquency levels and ticket sizes have changed since 2018, so the model is retrained and recalibrated on your own recent originations in the first stage of the pilot, before it influences any decision."],
   ["Does GigScore replace the credit bureau?", "No. Where a bureau score exists, GigScore uses it as one input. Its value is greatest where there is no score: it rank-orders new-to-credit applicants using information already captured at origination — loan, asset, documentation and any available credit history."],
   ["What data is required?", "Only fields an NBFC already captures on a two-wheeler application: loan amount, asset cost, age, employment type, KYC documents provided and the bureau report where available. No device data — contacts, SMS or photos — is used."],
   ["How are adverse decisions explained?", "Each recommendation states its three principal reasons in plain language, for example “The loan is a high share of the vehicle price”. These carry through to the decline letter. Every decline is reviewed by a credit officer before it is final."],
@@ -48,9 +38,10 @@ const faqs = [
       <div class="fhero-copy">
         <span class="pill-orange">Credit decisioning for two-wheeler lenders</span>
         <h1>Lend to new-to-credit riders with <em>confidence.</em></h1>
-        <p class="lede">Half of two-wheeler applicants have no bureau score. GigScore assesses them using data your teams
-          already capture at origination, gives every decision <b>a clear recommendation and its reasons</b>, and monitors
-          repayment capacity after disbursal.</p>
+        <p class="lede">Four in five two-wheeler loans go to borrowers new to the product, yet lenders are approving fewer applicants
+          without a credit score. GigScore assesses them using data your teams already capture at origination, gives every decision
+          <b>a clear recommendation and its reasons</b>, and monitors repayment capacity after disbursal from the borrower's own
+          bank statement, with consent.</p>
         <div class="icon-row">
           <div><span><Icon name="bolt" size={20} /></span>Sub-second<br />decisioning</div>
           <div><span><Icon name="apply" size={20} /></span>Stated reasons<br />for every decision</div>
@@ -94,27 +85,28 @@ const faqs = [
     </div>
   </section>
 
-  <!-- TRUST STRIP: facts, not logos -->
+  <!-- TRUST STRIP: the 2026 market, each figure with its source -->
   <section class="trust">
     <div class="inner">
-      <div><b>98,364</b><span>loans in the out-of-time validation</span></div>
-      <div><b>233,154</b><span>two-wheeler loans in the L&amp;T 2018 dataset</span></div>
-      <div><b>3</b><span>stated reasons on every recommendation</span></div>
-      <div><b>0</b><span>device data used — no contacts, SMS or photos</span></div>
+      {STRIP.map(([v, l, k]) => (
+        <div><b>{v}</b><span>{l}<a class="src" href={SRC[k].href} target="_blank" rel="noopener">{SRC[k].short} ↗</a></span></div>
+      ))}
     </div>
   </section>
 
-  <!-- MARKET TODAY: cited public evidence, 2024–25 -->
+  <!-- MARKET 2026: cited public evidence -->
   <section class="full reveal">
     <div class="inner">
-      <h2 class="big-h center">The market today: <em>growing, and riskier</em></h2>
-      <p class="sub-h center">Two-wheeler lending has expanded quickly since 2018, and early delinquency has risen with it. Most riders now hold a bank account, but few borrow from a formal lender.</p>
+      <h2 class="big-h center">The market in 2026: lenders are pulling back from <em>the riders who need them</em></h2>
+      <p class="sub-h center">Two-wheeler loans bring more first-time borrowers into credit than any other vehicle loan. Yet lenders now favour applicants with a score,
+        while the data that shows a rider's real repayment capacity — their bank statement — is already proving itself.</p>
       <div class="mkt-cards">
-        {market.map(([v, t, src, href]) => (
-          <div><b>{v}</b><p>{t}</p><a href={href} target="_blank" rel="noopener">{src} ↗</a></div>
+        {HEADLINES.map(([v, t, k]) => (
+          <div><b>{v}</b><p>{t}</p><a href={SRC[k].href} target="_blank" rel="noopener">{SRC[k].short} ↗</a></div>
         ))}
       </div>
-      <p class="tiny muted center" style="text-align:center;margin-top:18px">Figures are quoted from the sources shown. GigScore's own results on this page come from the L&amp;T 2018 validation; <a href="/analytics#data">how the evidence was produced →</a></p>
+      <p class="center" style="text-align:center;margin-top:26px"><a class="btn ghost big" href="/evidence">See all six findings and the charts behind them →</a></p>
+      <p class="tiny muted center" style="text-align:center;margin-top:12px">Market figures are quoted from the sources shown, published January–October 2026. GigScore's own model results further down this page come from the L&amp;T 2018 validation; <a href="/analytics#data">how that evidence was produced →</a></p>
     </div>
   </section>
 
@@ -205,10 +197,10 @@ const faqs = [
           </div>
           <div class="card" style="margin-top:16px">
             <div class="slider-row"><label for="est-apps">Applications per month</label><input type="range" id="est-apps" min="200" max="20000" step="100" value="3000" /><output id="est-apps-out"></output></div>
-            <div class="slider-row"><label for="est-ticket">Average ticket size</label><input type="range" id="est-ticket" min="30000" max="150000" step="1000" value="60000" /><output id="est-ticket-out"></output></div>
+            <div class="slider-row"><label for="est-ticket">Average ticket size</label><input type="range" id="est-ticket" min="30000" max="200000" step="1000" value="95000" /><output id="est-ticket-out"></output></div>
             <div class="slider-row"><label for="est-appr">Current approval rate</label><input type="range" id="est-appr" min="0.3" max="0.8" step="0.01" value="0.6" /><output id="est-appr-out"></output></div>
           </div>
-          <p class="tiny muted" style="margin-top:10px">Indicative only. Assumes the current policy rank-orders applicants by bureau score. A back-test on your own book, the first stage of the <a href="/pilot">pilot programme</a>, replaces this with measured figures.</p>
+          <p class="tiny muted" style="margin-top:10px">Indicative only. The ticket size starts at the industry average for April–June 2026, ₹94,967 (CRIF High Mark). Assumes the current policy rank-orders applicants by bureau score. A back-test on your own book, the first stage of the <a href="/pilot">pilot programme</a>, replaces this with measured figures.</p>
         </div>
         <div class="est-grid" id="est-out" data-nocount></div>
       </div>
@@ -411,10 +403,10 @@ const faqs = [
     // challenge picker
     const ANS: Record<string, any> = {
       noscore: { img: "woman-scooter", title: "A reliable assessment where the bureau has none",
-        text: `${pct(noScore.n / n, 0)} of applicants in the validation had no bureau score. For this segment the bureau score ranks risk at ${noScore.auc_bureau.toFixed(2)} — no better than chance (0.50). GigScore ranks it at ${noScore.auc.toFixed(2)}, approves ${pct(noScore.approval, 0)} of these applicants, and ${pct(1 - noScore.approved_default, 0)} of those approved paid their first EMI.`,
+        text: `Across the market, new-to-credit borrowers received 16% of new loans in late 2025, down from 22% in 2023 (TransUnion CIBIL). ${pct(noScore.n / n, 0)} of applicants in GigScore's validation had no bureau score. For this segment the bureau score ranks risk at ${noScore.auc_bureau.toFixed(2)} — no better than chance (0.50). GigScore ranks it at ${noScore.auc.toFixed(2)}, approves ${pct(noScore.approval, 0)} of these applicants, and ${pct(1 - noScore.approved_default, 0)} of those approved paid their first EMI.`,
         href: "/analytics", cta: "Review the validation" },
       firstemi: { img: "man-phone-steps", title: "Lower delinquency at origination and after disbursal",
-        text: `Declining the lowest-scored 20% of applicants avoids ${caught} of all first-EMI misses. After disbursal, the early-warning monitor reads the borrower's statement, with consent, and flags declining income before the next EMI date.`,
+        text: `Declining the lowest-scored 20% of applicants avoids ${caught} of all first-EMI misses. After disbursal, the early-warning monitor reads the borrower's statement, with consent, and flags declining income before the next EMI date. In June 2026, two-wheeler loans underwritten with consented bank-statement data were 0.5% 90+ days overdue, against 5.3% without it (CRIF High Mark and Sahamati).`,
         href: "/watch", cta: "Open the early-warning monitor" },
       slow: { img: "shop-phone", title: "Sub-second recommendations, with officer oversight",
         text: "Each application receives a score, a recommendation and its principal reasons in about a second. Referrals are routed to a credit officer's queue with a 24-hour service level, and breaches are surfaced automatically.",
