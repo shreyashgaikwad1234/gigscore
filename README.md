@@ -35,6 +35,26 @@ switch.
 
 ---
 
+## 🌏 The Market Today (2024–25)
+
+The L&T loans date from 2018. Public sources show the problem GigScore addresses has grown since:
+
+| Indicator | Value | Source |
+|:--|--:|:--|
+| Indian adults with an account | **89%** | World Bank, Global Findex 2025 (survey year 2024) |
+| … who borrowed from a formal lender in the past year | **15.1%** | Global Findex 2025 (63.3% borrowed in some form) |
+| Two-wheeler loans outstanding, Sept 2024 | **₹1.49 lakh crore** (+26.3% in a year) | CRIF High Mark, CreditScape: Two-Wheeler Loans |
+| Two-wheeler balances 31–180 days past due, Sept 2024 | **5.8%** — highest in six quarters | CRIF High Mark, CreditScape: Two-Wheeler Loans |
+| Ticket size with the highest early delinquency | **₹75,000 – 1 lakh** | CRIF High Mark, CreditScape: Two-Wheeler Loans |
+| Delivery riders who borrowed and missed at least one repayment | **about 1 in 3** | IDinsight, survey of 2,547 platform delivery riders, 2024 |
+| Delivery riders with a bank account | **99%** | IDinsight, 2024 |
+
+Most riders now have a bank account, which makes consent-based statement monitoring practical. Formal credit
+still reaches few of them, and early delinquency in two-wheeler lending is rising. These figures appear on
+the website's Overview page with links to each source.
+
+---
+
 ## 🚀 Key Features
 
 ### 🧠 Credit Model
@@ -249,10 +269,26 @@ to the starter plan with a persistent disk — see the comments in `render.yaml`
 
 ---
 
+## 🗂️ Data and Licensing
+
+| Data | Used for | Status |
+|:--|:--|:--|
+| L&T Vehicle Loan Default (233,154 loans, Aug–Oct 2018, plus 112,392 unlabelled Nov 2018 loans) | Model development and validation | Released for a public L&T Financial Services / Analytics Vidhya hackathon; the Kaggle copy states no licence. Not redistributed in this repository. |
+| CRIF High Mark, World Bank Global Findex 2025, IDinsight 2024 | Market context only | Published figures, quoted with attribution. Not used to train the model. |
+| Demonstration applicants, officers and bank statements | The website and workspace demo | Synthetic, created for this project. |
+
+**Reviewed and not used:** Home Credit's "Credit Risk Model Stability" dataset (Kaggle, 2024) is licensed
+for competition use only. No public dataset combines Indian borrowers, recent originations and repayment
+outcomes; Indian lenders cannot publish borrower-level data. A lender pilot therefore retrains and
+recalibrates the model on the lender's own recent originations before it influences any decision.
+
+---
+
 ## ⚠️ Limitations
 
-- The data is from one lender in 2018; default levels and ticket sizes are dated. A lender should
-  retrain and re-validate on its own book before use.
+- The data is from one lender in 2018; default levels and ticket sizes are dated (two-wheeler
+  delinquency has risen since — see *The Market Today*). A lender must retrain and re-validate on its
+  own book before use.
 - October's default rate (23.5%) was above the training window's (20.4%), so raw predictions run low
   until the monthly recalibration offset is applied.
 - The model uses the day of the month the loan is disbursed, so the same application can score

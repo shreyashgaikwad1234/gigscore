@@ -677,3 +677,18 @@ footer.site .foot-nav a { color: var(--text-2); font-weight: 600; font-size: 13.
 :root[data-theme="dark"] .toast { background: #22344d; }
 :root[data-theme="dark"] .letter { box-shadow: 0 0 0 1px var(--border); }
 :root[data-theme="dark"] .facts .bandbar i { background: #fff; }
+
+/* market evidence (Overview) */
+.mkt-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin-top: 34px; }
+.mkt-cards > div { display: flex; flex-direction: column; background: var(--surface); border-radius: 18px; padding: 24px; border: 1px solid #edf1f6; box-shadow: 0 16px 36px -24px rgba(2, 65, 110, .35); }
+.mkt-cards b { font-family: "Archivo", sans-serif; font-size: 34px; font-weight: 800; line-height: 1.05; color: var(--orange); }
+.mkt-cards p { font-size: 14.5px; color: var(--text-2); margin-top: 10px; flex: 1; }
+.mkt-cards a { font-size: 12.5px; font-weight: 600; color: var(--muted); margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.mkt-cards a:hover { color: var(--sky); }
+@media (max-width: 1080px) { .mkt-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .mkt-cards { grid-template-columns: minmax(0, 1fr); } }
+:root[data-theme="dark"] .mkt-cards > div { border-color: var(--border); box-shadow: none; }
+.data-note { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+.data-note > div { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+.data-note h3 { font-size: 15px; margin-bottom: 6px; } .data-note p { font-size: 14px; color: var(--text-2); }
+@media (max-width: 900px) { .data-note { grid-template-columns: minmax(0, 1fr); } }

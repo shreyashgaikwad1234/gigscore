@@ -491,7 +491,20 @@ def build(F: dict):
               P(f"GigScore uses information the lender already collects at the dealership — loan-to-value, the vehicle, "
                 f"employment type, existing loans if any — and ranks the same no-score applicants with an AUC of "
                 f"<b>{M[main]['no_score']['auc']:.3f}</b>. That ranking is what lets a lender approve the safer ones "
-                "instead of declining everybody.")]
+                "instead of declining everybody."),
+              P("<b>The market today.</b> The L&amp;T loans are from 2018. Published sources show that the gap has widened "
+                "since: most adults and riders now hold a bank account, few borrow formally, and early delinquency in "
+                "two-wheeler lending is rising. These figures are quoted from their sources; none is used to train the model.")]
+    story.append(table([
+        ["Indicator", "Value", "Source"],
+        ["Indian adults with an account", "89%", "World Bank, Global Findex 2025 (survey 2024)"],
+        ["... who borrowed from a formal lender in the past year", "15.1%", "Global Findex 2025 (63.3% borrowed in any form)"],
+        ["Two-wheeler loans outstanding, Sept 2024", f"{RUPEE}1.49 lakh crore", "CRIF High Mark, CreditScape: Two-Wheeler Loans"],
+        ["Two-wheeler balances 31–180 days past due, Sept 2024", "5.8%", "CRIF High Mark; highest in six quarters"],
+        ["Ticket size with the highest early delinquency", f"{RUPEE}75,000 – 1 lakh", "CRIF High Mark"],
+        ["Delivery riders who borrowed and missed a repayment", "about 1 in 3", "IDinsight, 2,547 riders surveyed, 2024"],
+        ["Delivery riders with a bank account", "99%", "IDinsight, 2024"],
+    ], [72 * mm, 33 * mm, 65 * mm], align_right=(1,)))
 
     # ----- 3 -----
     story += H1("3. The data")
@@ -526,6 +539,16 @@ def build(F: dict):
         "Some loan amounts are negative or absurd (up to 1,000,000,000). Amount columns are clipped at the 1st and 99th "
         "percentile of their non-zero values, using the training months only.",
     ])
+    story += [P("<b>Provenance and licence.</b> The data was released for a public L&amp;T Financial Services and "
+                "Analytics Vidhya hackathon and is redistributed on Kaggle with no stated licence. GigScore does not "
+                "redistribute it: the raw files are excluded from the code repository, and only the trained models and "
+                "aggregate results are published."),
+              P("<b>Alternatives reviewed.</b> No public dataset combines Indian borrowers, recent originations and "
+                "repayment outcomes, because Indian lenders cannot publish borrower-level data. Home Credit's 2024 "
+                "'Credit Risk Model Stability' dataset is newer and deeper, but its rules restrict it to competition use, "
+                "so it was not used. Bureau reports (CRIF High Mark) and surveys (Global Findex, IDinsight) supply current "
+                "aggregates for context only. The practical answer is the pilot: the model is retrained and recalibrated "
+                "on the lender's own recent originations before it influences any decision.")]
     story.append(callout("<b>Honesty rule.</b> Cleaning, feature screening, tuning, calibration and the decision cut-offs "
                          "use August–September only; October 2018 is the test month. One choice did look at October: the "
                          "decision to ship the fair model was made after comparing fairness options on October loans "
@@ -894,8 +917,9 @@ def build(F: dict):
     # ----- 14 -----
     story += H1("14. Limits, and what it takes to use it for real")
     story += bullets([
-        "<b>The data is from 2018 and one lender.</b> Default levels and loan sizes are dated. Before real use the pipeline "
-        "must be retrained on the deploying lender's own loans — a configuration change, not a rewrite.",
+        "<b>The data is from 2018 and one lender.</b> Default levels and loan sizes are dated: CRIF High Mark reports "
+        "two-wheeler balances 31–180 days past due at 5.8% in September 2024, the highest in six quarters. Before real use "
+        "the pipeline must be retrained on the deploying lender's own loans — a configuration change, not a rewrite.",
         "<b>The borrowers are 'gig-like', not confirmed gig workers:</b> self-employed two-wheeler buyers. The planned Pune "
         "rider survey and consented rider statements are what would connect the model to actual riders. The survey file in "
         "the project folder is simulated and was not used.",
