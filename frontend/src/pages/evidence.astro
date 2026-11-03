@@ -235,9 +235,9 @@ const cases = [
       xAxis: axisX({ type: "value", axisLabel: { color: c.muted, formatter: "{value}%" } }),
       yAxis: axisY({ type: "category", inverse: true, data: C.aa.labels, axisLabel: { color: c.text2, fontSize: 12, fontWeight: 600 } }),
       series: [
-        { type: "bar", name: "Without Account Aggregator data", data: C.aa.without, barWidth: 14, itemStyle: { color: c.rose, borderRadius: 4 },
+        { type: "bar", name: "Without AA data", data: C.aa.without, barWidth: 14, itemStyle: { color: c.rose, borderRadius: 4 },
           label: { show: true, position: "right", color: c.text2, fontSize: 11, formatter: (p: any) => p1(p.value) } },
-        { type: "bar", name: "With Account Aggregator data", data: C.aa.with, barWidth: 14, itemStyle: { color: c.mint, borderRadius: 4 },
+        { type: "bar", name: "With AA (bank-statement) data", data: C.aa.with, barWidth: 14, itemStyle: { color: c.mint, borderRadius: 4 },
           label: { show: true, position: "right", color: c.text2, fontSize: 11, fontWeight: 700, formatter: (p: any) => p1(p.value) } },
       ] };
   });
